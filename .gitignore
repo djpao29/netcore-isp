@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug files
+_debug_*.php
+*_test.php
+*_test2.php
+
+# Storage (runtime data)
+storage/*.json
+storage/logs/
+storage/cache/
+
+# Build artifacts
+*.tsbuildinfo
+.esbuild/
+
+# Test coverage
+coverage/
+
+# Misc
+*.pem
+*.key
+*.crt

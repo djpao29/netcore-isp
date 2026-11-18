@@ -1,0 +1,7224 @@
+// ============================================================================
+//  Fuente única de verdad de los módulos del panel (metadata-driven).
+//  Ejecuta "npm run generate:php" tras cambiar este archivo para regenerar
+//  app/Generated/modules.json usado por el backend PHP.
+// ============================================================================
+
+export interface FieldDef {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'money' | 'percent' | 'select' | 'date' | 'time' | 'datetime' | 'password' | 'email' | 'tel' | 'checkbox';
+  required?: boolean;
+  options?: string[];
+  source?: string;
+  sourceValue?: string;
+  sourceLabel?: string;
+  companion?: string;
+  companions?: Array<{ field: string; sourceField: string }>;
+  hidden?: boolean;
+  placeholder?: string;
+}
+
+export type FieldType = FieldDef['type'];
+export type ColumnType = ColumnDef['type'];
+export type GroupName = (typeof GROUP_ORDER)[number];
+export type IntegrationKind = ModuleDef['integration'];
+export const MODULE_DEFAULTS = {
+  auto_reactivate: true,
+  ocr_auto_approve: false,
+  simple_queues: [],
+  pcq_queues: [],
+  freeradius_profiles: [],
+  payment_proofs: [],
+  simplequeue_sync: [],
+  pcq_sync: [],
+  freeradius_sync: [],
+  olt_onu_sync: [],
+};
+
+export interface ColumnDef {
+  name: string;
+  label: string;
+  type: 'text' | 'mono' | 'number' | 'money' | 'percent' | 'badge' | 'date';
+  tone?: string;
+}
+
+export interface ModuleDef {
+  key: string;
+  integration?: 'real' | 'config' | 'pending';
+  label: string;
+  group: string;
+  icon: string;
+  description: string;
+  codePrefix: string;
+  search: string[];
+  columns: ColumnDef[];
+  fields: FieldDef[];
+  defaults?: Record<string, any>;
+  rowActions?: string[];
+}
+
+export const GROUP_ORDER = [
+  "Clientes",
+  "Finanzas",
+  "Sistema",
+  "Soporte Técnico",
+  "Almacén",
+  "Staff",
+  "Ajustes",
+  "Mi empresa"
+];
+
+export const MODULE_REGISTRY: ModuleDef[] = [
+  {
+    key: 'customers',
+    integration: 'real',
+    label: 'Clientes',
+    group: 'Clientes',
+    icon: 'Users',
+    description: 'Padron de clientes con datos basicos, plan, direccion y dia de corte. El corte/reactivacion se aplica realmente en RouterOS via API (requiere router + PPPoE).',
+    codePrefix: 'CLI',
+    search: ["code","first_name","last_name","document_id","phone","email","pppoe_user","zone"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Codigo",
+                "type": "mono"
+          },
+          {
+                "name": "first_name",
+                "label": "Nombres",
+                "type": "text"
+          },
+          {
+                "name": "last_name",
+                "label": "Apellidos",
+                "type": "text"
+          },
+          {
+                "name": "phone",
+                "label": "Telefono",
+                "type": "text"
+          },
+          {
+                "name": "plan_name",
+                "label": "Plan",
+                "type": "text"
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text"
+          },
+          {
+                "name": "cut_day",
+                "label": "Dia corte",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "first_name",
+                "label": "Nombres",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "last_name",
+                "label": "Apellidos",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "document_id",
+                "label": "Documento / Cedula",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "phone",
+                "label": "Telefono",
+                "type": "tel",
+                "required": false
+          },
+          {
+                "name": "email",
+                "label": "Correo",
+                "type": "email",
+                "required": false
+          },
+          {
+                "name": "plan_id",
+                "label": "Plan del cliente",
+                "type": "select",
+                "required": true,
+                "source": "plans",
+                "sourceValue": "id",
+                "sourceLabel": "name",
+                "companion": "plan_name"
+          },
+          {
+                "name": "zone_id",
+                "label": "Zona del cliente",
+                "type": "select",
+                "source": "zones",
+                "sourceValue": "id",
+                "sourceLabel": "name",
+                "companion": "zone",
+                "companions": [
+                      {
+                            "field": "cut_day",
+                            "sourceField": "cut_day"
+                      }
+                ]
+          },
+          {
+                "name": "plan_name",
+                "label": "Plan",
+                "type": "text",
+                "hidden": true
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text",
+                "hidden": true
+          },
+          {
+                "name": "address",
+                "label": "Direccion",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "cut_day",
+                "label": "Dia de corte",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "router_id",
+                "label": "ID del router",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "pppoe_user",
+                "label": "Usuario PPPoE",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "pppoe_password",
+                "label": "Clave PPPoE",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Moroso",
+                      "Suspendido",
+                      "Cancelado"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "cut_day": 5
+    },
+    rowActions: ["invoice","whatsapp"],
+  },
+  {
+    key: 'zones',
+    label: 'Zonas',
+    group: 'Clientes',
+    icon: 'Map',
+    description: 'Zonas por fecha de pago/corte, puntos geográficos y tareas periódicas propias.',
+    codePrefix: 'ZON',
+    search: ["code","name","city","sector"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Zona",
+                "type": "text"
+          },
+          {
+                "name": "city",
+                "label": "Ciudad",
+                "type": "text"
+          },
+          {
+                "name": "payment_day",
+                "label": "Día Pago",
+                "type": "text"
+          },
+          {
+                "name": "cut_day",
+                "label": "Día Corte",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la Zona",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "city",
+                "label": "Ciudad",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "sector",
+                "label": "Sector / Colonia",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "payment_day",
+                "label": "Día de facturación (1-28)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "cut_day",
+                "label": "Día de corte (1-28)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "gps_lat",
+                "label": "Latitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "gps_lng",
+                "label": "Longitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "payment_day": 1,
+          "cut_day": 5
+    },
+  },
+  {
+    key: 'sectors',
+    label: 'Sectorial / Nodo / AP',
+    group: 'Clientes',
+    icon: 'RadioTower',
+    description: 'Sectoriales, nodos, NAP y Access Points con coordenadas y router asociado.',
+    codePrefix: 'SEC',
+    search: ["code","name","type","ip_address"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "ip_address",
+                "label": "IP Gestión",
+                "type": "mono"
+          },
+          {
+                "name": "frequency_band",
+                "label": "Banda",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "Sectorial",
+                      "Nodo",
+                      "NAP",
+                      "Access Point"
+                ],
+                "required": false
+          },
+          {
+                "name": "ip_address",
+                "label": "IP de Gestión",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "frequency_band",
+                "label": "Banda",
+                "type": "select",
+                "options": [
+                      "2.4 GHz",
+                      "5 GHz",
+                      "6 GHz",
+                      "60 GHz",
+                      "Fibra Óptica GPON"
+                ],
+                "required": false
+          },
+          {
+                "name": "ssid",
+                "label": "SSID",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "rut",
+                "label": "RUT / Router",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "gps_lat",
+                "label": "Latitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "gps_lng",
+                "label": "Longitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo",
+                      "Mantenimiento"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "type": "Sectorial"
+    },
+  },
+  {
+    key: 'installations',
+    label: 'Instalaciones',
+    group: 'Clientes',
+    icon: 'HardHat',
+    description: 'Agendado, activación, cobro e impresión de hojas de instalación por técnico.',
+    codePrefix: 'INS',
+    search: ["code","customer_name","technician","zone","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "plan_name",
+                "label": "Plan",
+                "type": "text"
+          },
+          {
+                "name": "scheduled_date",
+                "label": "Agendada",
+                "type": "date"
+          },
+          {
+                "name": "technician",
+                "label": "Técnico",
+                "type": "text"
+          },
+          {
+                "name": "cost",
+                "label": "Costo",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "plan_name",
+                "label": "Plan contratado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "scheduled_date",
+                "label": "Fecha agendada",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "scheduled_time",
+                "label": "Hora",
+                "type": "time",
+                "required": false
+          },
+          {
+                "name": "technician",
+                "label": "Técnico asignado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "address",
+                "label": "Dirección",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "gps_lat",
+                "label": "Latitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "gps_lng",
+                "label": "Longitud",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "cost",
+                "label": "Costo de instalación",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Agendada",
+                      "En proceso",
+                      "Activada",
+                      "Cancelada"
+                ],
+                "required": false
+          },
+          {
+                "name": "signed_by",
+                "label": "Firmada por",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Notas de instalación",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Agendada",
+          "cost": 0
+    },
+  },
+  {
+    key: 'push_devices',
+    integration: 'pending',
+    label: 'Notificaciones Push (Dispositivos)',
+    group: 'Clientes',
+    icon: 'Smartphone',
+    description: 'Dispositivos con la App de clientes instalada, listos para Push y Web Push.',
+    codePrefix: 'DEV',
+    search: ["code","customer_name","device_model","platform"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "device_model",
+                "label": "Dispositivo",
+                "type": "text"
+          },
+          {
+                "name": "platform",
+                "label": "Plataforma",
+                "type": "badge"
+          },
+          {
+                "name": "app_version",
+                "label": "App",
+                "type": "text"
+          },
+          {
+                "name": "last_seen",
+                "label": "Última conexión",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "device_model",
+                "label": "Modelo del dispositivo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "platform",
+                "label": "Plataforma",
+                "type": "select",
+                "options": [
+                      "Android",
+                      "iOS",
+                      "Web"
+                ],
+                "required": false
+          },
+          {
+                "name": "app_version",
+                "label": "Versión de App",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "token",
+                "label": "Token Push",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "last_seen",
+                "label": "Última conexión",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "platform": "Android"
+    },
+  },
+  {
+    key: 'contracts',
+    integration: 'pending',
+    label: 'Contratos',
+    group: 'Clientes',
+    icon: 'FileSignature',
+    description: 'Contratos con plantillas personalizables y firma digital (IFT / MinTIC).',
+    codePrefix: 'CTR',
+    search: ["code","customer_name","signer_name","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "template",
+                "label": "Plantilla",
+                "type": "text"
+          },
+          {
+                "name": "signed_date",
+                "label": "Firma",
+                "type": "date"
+          },
+          {
+                "name": "signer_name",
+                "label": "Firmante",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "template",
+                "label": "Plantilla",
+                "type": "select",
+                "options": [
+                      "Contrato Residencial",
+                      "Contrato Empresarial",
+                      "Contrato MinTIC",
+                      "Contrato IFT"
+                ],
+                "required": false
+          },
+          {
+                "name": "signed_date",
+                "label": "Fecha de firma",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "signer_name",
+                "label": "Nombre del firmante",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "signer_id",
+                "label": "Documento del firmante",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "ip_signature",
+                "label": "IP / Hash de firma digital",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Borrador",
+                      "Enviado",
+                      "Firmado",
+                      "Cancelado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Cláusulas adicionales",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Borrador",
+          "template": "Contrato Residencial"
+    },
+  },
+  {
+    key: 'invoices',
+    integration: 'real',
+    label: 'Facturas',
+    group: 'Finanzas',
+    icon: 'FileText',
+    description: 'Facturación del servicio. La generación mensual y el marcado de vencidas se ejecutan de verdad por el motor de tareas programadas.',
+    codePrefix: 'FAC',
+    search: ["code","invoice_number","customer_name","concept","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "invoice_number",
+                "label": "N° Factura",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "issue_date",
+                "label": "Emisión",
+                "type": "date"
+          },
+          {
+                "name": "due_date",
+                "label": "Vencimiento",
+                "type": "date"
+          },
+          {
+                "name": "total",
+                "label": "Total",
+                "type": "money"
+          },
+          {
+                "name": "paid_amount",
+                "label": "Pagado",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "invoice_number",
+                "label": "N° de factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "customer_id",
+                "label": "ID del cliente",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "plan_id",
+                "label": "ID del plan",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "plan_name",
+                "label": "Plan",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "issue_date",
+                "label": "Fecha de emisión",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "due_date",
+                "label": "Fecha de vencimiento",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "concept",
+                "label": "Concepto",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "subtotal",
+                "label": "Subtotal",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "discount",
+                "label": "Descuento",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "tax_amount",
+                "label": "Impuestos",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "total",
+                "label": "Total",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "paid_amount",
+                "label": "Monto pagado",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "preferred_payment_method",
+                "label": "Forma de pago preferida",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Pagada",
+                      "Parcial",
+                      "Vencida",
+                      "Anulada"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "subtotal": 0,
+          "discount": 0,
+          "tax_amount": 0,
+          "total": 0,
+          "paid_amount": 0
+    },
+    rowActions: ["pay","download"],
+  },
+  {
+    key: 'payments',
+    label: 'Pagos',
+    group: 'Finanzas',
+    icon: 'BadgeDollarSign',
+    description: 'Registro de pagos recibidos con su comprobante y validación. La validación es manual: no hay pasarela de cobro en línea conectada.',
+    codePrefix: 'PAG',
+    search: ["code","receipt_number","customer_name","reference","method"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "receipt_number",
+                "label": "N° Recibo",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "invoice_number",
+                "label": "Factura",
+                "type": "mono"
+          },
+          {
+                "name": "paid_at",
+                "label": "Fecha",
+                "type": "date"
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money"
+          },
+          {
+                "name": "method",
+                "label": "Método",
+                "type": "text"
+          },
+          {
+                "name": "validation_status",
+                "label": "Validación",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "receipt_number",
+                "label": "N° de recibo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "customer_id",
+                "label": "ID del cliente",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "invoice_id",
+                "label": "ID de la factura",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "invoice_number",
+                "label": "N° de factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "paid_at",
+                "label": "Fecha de pago",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "method",
+                "label": "Método de pago",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "reference",
+                "label": "Referencia / Autorización",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "bank_account_id",
+                "label": "ID de cuenta bancaria",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "proof_file_path",
+                "label": "Comprobante (ruta/archivo)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "validation_status",
+                "label": "Estado de validación",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Validado",
+                      "Rechazado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "validation_status": "Pendiente",
+          "amount": 0,
+          "paid_at": "2026-10-25"
+    },
+  },
+  {
+    key: 'payment_promises',
+    label: 'Promesas de Pago',
+    group: 'Finanzas',
+    icon: 'CalendarClock',
+    description: 'Compromisos de pago del cliente. Mientras exista una promesa Pendiente, el motor de corte no suspende el servicio.',
+    codePrefix: 'PROM',
+    search: ["code","customer_name","promised_date","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "invoice_number",
+                "label": "Factura",
+                "type": "mono"
+          },
+          {
+                "name": "promised_date",
+                "label": "Fecha prometida",
+                "type": "date"
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_id",
+                "label": "ID del cliente",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "invoice_id",
+                "label": "ID de la factura",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "invoice_number",
+                "label": "N° de factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "promised_date",
+                "label": "Fecha prometida",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "amount",
+                "label": "Monto comprometido",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "comment",
+                "label": "Comentario",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Cumplida",
+                      "Incumplida",
+                      "Cancelada"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "amount": 0,
+          "promised_date": "2026-10-25"
+    },
+  },
+  {
+    key: 'payment_proofs',
+    label: 'Comprobantes de Pago',
+    group: 'Finanzas',
+    icon: 'FileCheck',
+    description: 'Comprobantes de pago recibidos vía WhatsApp/Portal con OCR para validación administrativa.',
+    codePrefix: 'COMP',
+    search: ["code","customer_name","invoice_number","status"],
+    columns: [
+      {
+        "name": "code",
+        "label": "Código",
+        "type": "mono"
+      },
+      {
+        "name": "customer_name",
+        "label": "Cliente",
+        "type": "text"
+      },
+      {
+        "name": "invoice_number",
+        "label": "Factura",
+        "type": "mono"
+      },
+      {
+        "name": "ocr_extracted_amount",
+        "label": "Monto OCR",
+        "type": "money"
+      },
+      {
+        "name": "ocr_extracted_bank",
+        "label": "Banco",
+        "type": "text"
+      },
+      {
+        "name": "ocr_extracted_reference",
+        "label": "Referencia",
+        "type": "text"
+      },
+      {
+        "name": "status",
+        "label": "Estado",
+        "type": "badge"
+      }
+    ],
+    fields: [
+      {
+        "name": "customer_id",
+        "label": "ID del cliente",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "customer_name",
+        "label": "Cliente",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "invoice_id",
+        "label": "ID de la factura",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "invoice_number",
+        "label": "N° de factura",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "source_channel",
+        "label": "Canal de origen",
+        "type": "select",
+        "options": [
+          "WhatsApp",
+          "Portal Cliente",
+          "Oficina"
+        ],
+        "required": false
+      },
+      {
+        "name": "file_path",
+        "label": "Comprobante (ruta/archivo)",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "ocr_extracted_bank",
+        "label": "Banco (OCR)",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "ocr_extracted_date",
+        "label": "Fecha (OCR)",
+        "type": "date",
+        "required": false
+      },
+      {
+        "name": "ocr_extracted_amount",
+        "label": "Monto (OCR)",
+        "type": "money",
+        "required": false
+      },
+      {
+        "name": "ocr_extracted_reference",
+        "label": "Referencia (OCR)",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "ocr_confidence",
+        "label": "Confianza OCR (%)",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "ocr_raw_json",
+        "label": "JSON OCR crudo",
+        "type": "textarea",
+        "required": false
+      },
+      {
+        "name": "status",
+        "label": "Estado de validación",
+        "type": "select",
+        "options": [
+          "Pendiente de revisión",
+          "Aprobado",
+          "Rechazado"
+        ],
+        "required": false
+      },
+      {
+        "name": "reviewed_by_user_id",
+        "label": "Revisado por",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "reviewed_at",
+        "label": "Fecha de revisión",
+        "type": "datetime",
+        "required": false
+      },
+      {
+        "name": "rejection_reason",
+        "label": "Motivo de rechazo",
+        "type": "textarea",
+        "required": false
+      }
+    ],
+    defaults: {
+      "status": "Pendiente de revisión"
+    }
+  },
+  {
+    key: 'other_income',
+    label: 'Otros Ingresos',
+    group: 'Finanzas',
+    icon: 'TrendingUp',
+    description: 'Ingresos sin cliente o por conceptos distintos a la mensualidad de Internet.',
+    codePrefix: 'OI',
+    search: ["code","concept","customer_name","invoice_number"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "concept",
+                "label": "Concepto",
+                "type": "text"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money"
+          },
+          {
+                "name": "income_date",
+                "label": "Fecha",
+                "type": "date"
+          },
+          {
+                "name": "method",
+                "label": "Método",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "concept",
+                "label": "Concepto",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente (opcional)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "income_date",
+                "label": "Fecha",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "method",
+                "label": "Método de pago",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "invoice_number",
+                "label": "Folio / Factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pagado",
+                      "Pendiente",
+                      "Cancelado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pagado",
+          "amount": 0,
+          "income_date": "2026-10-25"
+    },
+  },
+  {
+    key: 'expenses',
+    label: 'Gastos',
+    group: 'Finanzas',
+    icon: 'TrendingDown',
+    description: 'Registro de gastos por grupo y categoría para el estado de resultados.',
+    codePrefix: 'GAS',
+    search: ["code","concept","category","provider"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "concept",
+                "label": "Concepto",
+                "type": "text"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money"
+          },
+          {
+                "name": "expense_date",
+                "label": "Fecha",
+                "type": "date"
+          },
+          {
+                "name": "payment_method",
+                "label": "Forma de pago",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "concept",
+                "label": "Concepto",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "group_name",
+                "label": "Grupo contable",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "amount",
+                "label": "Monto",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "expense_date",
+                "label": "Fecha del gasto",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "payment_method",
+                "label": "Forma de pago",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "reference",
+                "label": "Referencia / Factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pagado",
+                      "Pendiente",
+                      "Cancelado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pagado",
+          "amount": 0,
+          "expense_date": "2026-10-25"
+    },
+  },
+  {
+    key: 'expense_categories',
+    label: 'Categorías de Gastos',
+    group: 'Finanzas',
+    icon: 'Tags',
+    description: 'Grupos y categorías de gastos usadas en contabilidad y estadísticas.',
+    codePrefix: 'CAT',
+    search: ["code","name","group_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "group_name",
+                "label": "Grupo",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la categoría",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "group_name",
+                "label": "Grupo contable",
+                "type": "select",
+                "options": [
+                      "Operación",
+                      "Nómina",
+                      "Infraestructura",
+                      "Transporte",
+                      "Impuestos",
+                      "Administrativo"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "group_name": "Operación"
+    },
+  },
+  {
+    key: 'payment_methods',
+    label: 'Formas de Pago',
+    group: 'Finanzas',
+    icon: 'CreditCard',
+    description: 'Formas de pago, pasarelas y cuentas asociadas con su comisión.',
+    codePrefix: 'FP',
+    search: ["code","name","type","bank_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Forma de pago",
+                "type": "text"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "bank_name",
+                "label": "Banco/Pasarela",
+                "type": "text"
+          },
+          {
+                "name": "currency",
+                "label": "Moneda",
+                "type": "text"
+          },
+          {
+                "name": "commission_pct",
+                "label": "Comisión",
+                "type": "percent"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "Efectivo",
+                      "Transferencia",
+                      "Tarjeta",
+                      "Pasarela",
+                      "Cheque",
+                      "Otro"
+                ],
+                "required": false
+          },
+          {
+                "name": "bank_name",
+                "label": "Banco / Pasarela",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "currency",
+                "label": "Moneda",
+                "type": "select",
+                "options": [
+                      "USD",
+                      "MXN",
+                      "COP",
+                      "ARS",
+                      "CLP",
+                      "PEN",
+                      "GTQ",
+                      "DOP",
+                      "VES"
+                ],
+                "required": false
+          },
+          {
+                "name": "commission_pct",
+                "label": "Comisión (%)",
+                "type": "percent",
+                "required": false
+          },
+          {
+                "name": "instructions",
+                "label": "Instrucciones al cliente",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Oculto",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "type": "Efectivo",
+          "currency": "USD",
+          "commission_pct": 0
+    },
+  },
+  {
+    key: 'cash_sessions',
+    label: 'Reporte de Caja',
+    group: 'Finanzas',
+    icon: 'Wallet',
+    description: 'Cortes de caja por cobrador, con monto inicial, recaudado y arqueo.',
+    codePrefix: 'CAJ',
+    search: ["code","collector","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "collector",
+                "label": "Cobrador",
+                "type": "text"
+          },
+          {
+                "name": "opened_at",
+                "label": "Apertura",
+                "type": "date"
+          },
+          {
+                "name": "closed_at",
+                "label": "Cierre",
+                "type": "date"
+          },
+          {
+                "name": "initial_amount",
+                "label": "Inicial",
+                "type": "money"
+          },
+          {
+                "name": "collected",
+                "label": "Recaudado",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "collector",
+                "label": "Cobrador / Cajero",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "opened_at",
+                "label": "Apertura",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "closed_at",
+                "label": "Cierre",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "initial_amount",
+                "label": "Monto inicial",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "collected",
+                "label": "Total recaudado",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "difference",
+                "label": "Diferencia / Arqueo",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Abierta",
+                      "Cerrada",
+                      "Cuadrada",
+                      "Con diferencia"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Abierta",
+          "initial_amount": 0,
+          "collected": 0,
+          "difference": 0
+    },
+  },
+  {
+    key: 'reconciliations',
+    label: 'Conciliación',
+    group: 'Finanzas',
+    icon: 'Scale',
+    description: 'Conciliación de clientes por fecha de emisión o pago y validación bancaria.',
+    codePrefix: 'CON',
+    search: ["code","period","customer_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "period",
+                "label": "Periodo",
+                "type": "text"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "invoiced_total",
+                "label": "Facturado",
+                "type": "money"
+          },
+          {
+                "name": "paid_total",
+                "label": "Pagado",
+                "type": "money"
+          },
+          {
+                "name": "difference",
+                "label": "Diferencia",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "period",
+                "label": "Periodo (YYYY-MM)",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "criterion",
+                "label": "Criterio",
+                "type": "select",
+                "options": [
+                      "Fecha de emisión",
+                      "Fecha de pago"
+                ],
+                "required": false
+          },
+          {
+                "name": "invoiced_total",
+                "label": "Total facturado",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "paid_total",
+                "label": "Total pagado",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "difference",
+                "label": "Diferencia",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "bank_validated",
+                "label": "Validación bancaria",
+                "type": "select",
+                "options": [
+                      "Sí",
+                      "No"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Conciliado",
+                      "Con diferencia"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "criterion": "Fecha de pago",
+          "bank_validated": "No"
+    },
+  },
+  {
+    key: 'tasks',
+    label: 'Tareas Periódicas',
+    group: 'Sistema',
+    icon: 'Clock',
+    description: 'Automatización: facturación, avisos en pantalla, cortes y reconexiones por hora.',
+    codePrefix: 'TSK',
+    search: ["code","name","action","zone"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Tarea",
+                "type": "text"
+          },
+          {
+                "name": "action",
+                "label": "Acción",
+                "type": "badge"
+          },
+          {
+                "name": "hour",
+                "label": "Hora",
+                "type": "mono"
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text"
+          },
+          {
+                "name": "last_run",
+                "label": "Última ejecución",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la tarea",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "action",
+                "label": "Acción",
+                "type": "select",
+                "options": [
+                      "Facturación",
+                      "Aviso de pago",
+                      "Aviso en pantalla",
+                      "Corte de servicio",
+                      "Reconexión",
+                      "Recordatorio SMS",
+                      "Recordatorio WhatsApp",
+                      "Otra"
+                ],
+                "required": false
+          },
+          {
+                "name": "hour",
+                "label": "Hora de ejecución (HH:MM)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "router",
+                "label": "Router",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "days_offset",
+                "label": "Días de desfase",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "last_run",
+                "label": "Última ejecución",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo",
+                      "Pausado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "hour": "02:00",
+          "action": "Facturación"
+    },
+  },
+  {
+    key: 'firewall_blocks',
+    label: 'Bloqueo de Páginas',
+    group: 'Sistema',
+    icon: 'ShieldBan',
+    description: 'Bloqueo por Address List, Layer 7 o Web Proxy, con categorías y listas negras.',
+    codePrefix: 'BLK',
+    search: ["code","name","target","category","router"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Regla",
+                "type": "text"
+          },
+          {
+                "name": "method",
+                "label": "Método",
+                "type": "badge"
+          },
+          {
+                "name": "target",
+                "label": "Destino",
+                "type": "mono"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "router",
+                "label": "Router",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la regla",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "method",
+                "label": "Método",
+                "type": "select",
+                "options": [
+                      "Address List",
+                      "Layer 7",
+                      "Web Proxy"
+                ],
+                "required": false
+          },
+          {
+                "name": "target",
+                "label": "IP / Dominio / Regex",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "select",
+                "options": [
+                      "Juegos de azar",
+                      "Adultos",
+                      "Redes sociales",
+                      "Streaming",
+                      "Malware",
+                      "Personalizada"
+                ],
+                "required": false
+          },
+          {
+                "name": "router",
+                "label": "Router",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "action",
+                "label": "Acción",
+                "type": "select",
+                "options": [
+                      "Reject",
+                      "Drop",
+                      "Aviso en pantalla"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "method": "Address List",
+          "action": "Reject"
+    },
+  },
+  {
+    key: 'blacklists',
+    label: 'Listas Negras',
+    group: 'Sistema',
+    icon: 'Ban',
+    description: 'Listas negras predeterminadas (ej. Coljuegos) listas para instalar en el router.',
+    codePrefix: 'BL',
+    search: ["code","name","category","source"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Lista",
+                "type": "text"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "entries_count",
+                "label": "Entradas",
+                "type": "number"
+          },
+          {
+                "name": "source",
+                "label": "Origen",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la lista",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "entries_count",
+                "label": "Número de entradas",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "source",
+                "label": "Origen / URL",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "entries_count": 0
+    },
+  },
+  {
+    key: 'radius_users',
+    integration: 'pending',
+    label: 'Freeradius',
+    group: 'Sistema',
+    icon: 'ServerCog',
+    description: 'Usuarios PPPoE/PPPoE-FreeRADIUS, perfiles y corte por Address List o Reject.',
+    codePrefix: 'RAD',
+    search: ["code","username","profile","framed_ip"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "username",
+                "label": "Usuario",
+                "type": "mono"
+          },
+          {
+                "name": "profile",
+                "label": "Perfil",
+                "type": "text"
+          },
+          {
+                "name": "framed_ip",
+                "label": "IP Fija",
+                "type": "mono"
+          },
+          {
+                "name": "cut_mode",
+                "label": "Modo Corte",
+                "type": "badge"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "username",
+                "label": "Usuario RADIUS",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "password",
+                "label": "Contraseña",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "profile",
+                "label": "Perfil / Plan",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "framed_ip",
+                "label": "IP estática (Framed-IP)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "ipv6_prefix",
+                "label": "Prefijo IPv6",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "cut_mode",
+                "label": "Modo de corte",
+                "type": "select",
+                "options": [
+                      "Address List Moroso",
+                      "Reject",
+                      "Ninguno"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Suspendido",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "cut_mode": "Reject"
+    },
+  },
+    {
+      key: 'simple_queues',
+      integration: 'real',
+      label: 'Simple Queues',
+      group: 'Sistema',
+      icon: 'Gauge',
+      description: 'Colas simples MikroTik (Simple Queue) para control de ancho de banda por cliente/IP. Sincronía real vía API RouterOS.',
+      codePrefix: 'SQ',
+      search: ["code","name","target_ip","max_limit","router"],
+      columns: [
+        {
+              "name": "code",
+              "label": "Código",
+              "type": "mono"
+        },
+        {
+              "name": "name",
+              "label": "Nombre",
+              "type": "text"
+        },
+        {
+              "name": "target_ip",
+              "label": "IP Objetivo",
+              "type": "mono"
+        },
+        {
+              "name": "max_limit_up",
+              "label": "Subida",
+              "type": "text"
+        },
+        {
+              "name": "max_limit_down",
+              "label": "Bajada",
+              "type": "text"
+        },
+        {
+              "name": "router_name",
+              "label": "Router",
+              "type": "text"
+        },
+        {
+              "name": "priority",
+              "label": "Prioridad",
+              "type": "text"
+        },
+        {
+              "name": "burst_limit",
+              "label": "Ráfaga",
+              "type": "text"
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "badge"
+        }
+      ],
+      fields: [
+        {
+              "name": "name",
+              "label": "Nombre de la cola",
+              "type": "text",
+              "required": true
+        },
+        {
+              "name": "router_id",
+              "label": "Router MikroTik",
+              "type": "select",
+              "required": true,
+              "source": "routers",
+              "sourceValue": "id",
+              "sourceLabel": "name",
+              "companion": "router_name"
+        },
+        {
+              "name": "router_name",
+              "label": "Router",
+              "type": "text",
+              "hidden": true
+        },
+        {
+              "name": "target_ip",
+              "label": "IP Objetivo (CIDR)",
+              "type": "text",
+              "required": true,
+              "placeholder": "10.10.10.5/32"
+        },
+        {
+              "name": "dst_ip",
+              "label": "IP Destino (opcional)",
+              "type": "text",
+              "required": false,
+              "placeholder": "0.0.0.0/0"
+        },
+        {
+              "name": "max_limit_up",
+              "label": "Límite Subida (ej: 10M)",
+              "type": "text",
+              "required": true,
+              "placeholder": "10M"
+        },
+        {
+              "name": "max_limit_down",
+              "label": "Límite Bajada (ej: 50M)",
+              "type": "text",
+              "required": true,
+              "placeholder": "50M"
+        },
+        {
+              "name": "burst_limit_up",
+              "label": "Ráfaga Subida (ej: 20M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_limit_down",
+              "label": "Ráfaga Bajada (ej: 100M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_threshold_up",
+              "label": "Umbral Ráfaga Subida (ej: 8M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_threshold_down",
+              "label": "Umbral Ráfaga Bajada (ej: 40M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_time_up",
+              "label": "Tiempo Ráfaga Subida (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_time_down",
+              "label": "Tiempo Ráfaga Bajada (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "priority",
+              "label": "Prioridad (1-8)",
+              "type": "number",
+              "required": false,
+              "placeholder": "8"
+        },
+        {
+              "name": "parent_queue",
+              "label": "Cola Padre (opcional)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "queue_type",
+              "label": "Tipo de cola",
+              "type": "select",
+              "options": [
+                    "default",
+                    "ethernet-default",
+                    "wireless-default",
+                    "synchronous-default",
+                    "hotspot-default",
+                    "only-hardware-queue",
+                    "multi-queue-ethernet-default"
+              ],
+              "required": false
+        },
+        {
+              "name": "customer_id",
+              "label": "ID Cliente (opcional)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "customer_name",
+              "label": "Cliente",
+              "type": "text",
+              "hidden": true
+        },
+        {
+              "name": "address_list",
+              "label": "Address List (para corte)",
+              "type": "text",
+              "required": false,
+              "placeholder": "MOROSOS_ISP"
+        },
+        {
+              "name": "comment",
+              "label": "Comentario",
+              "type": "textarea",
+              "required": false
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "select",
+              "options": [
+                    "enabled",
+                    "disabled"
+              ],
+              "required": false
+        }
+      ],
+      defaults: {
+        "status": "enabled",
+        "priority": 8,
+        "queue_type": "default",
+        "dst_ip": "0.0.0.0/0"
+      },
+      rowActions: ["test","sync"]
+    },
+    {
+      key: 'pcq_queues',
+      integration: 'real',
+      label: 'PCQ + Address Lists',
+      group: 'Sistema',
+      icon: 'Layers',
+      description: 'Colas PCQ (Per Connection Queue) con Address Lists para control de ancho de banda masivo y corte por morosidad. Sincronía real vía API RouterOS.',
+      codePrefix: 'PCQ',
+      search: ["code","name","rate","address_list","router"],
+      columns: [
+        {
+              "name": "code",
+              "label": "Código",
+              "type": "mono"
+        },
+        {
+              "name": "name",
+              "label": "Nombre",
+              "type": "text"
+        },
+        {
+              "name": "rate_down",
+              "label": "Bajada",
+              "type": "text"
+        },
+        {
+              "name": "rate_up",
+              "label": "Subida",
+              "type": "text"
+        },
+        {
+              "name": "address_list",
+              "label": "Address List",
+              "type": "mono"
+        },
+        {
+              "name": "router_name",
+              "label": "Router",
+              "type": "text"
+        },
+        {
+              "name": "priority",
+              "label": "Prioridad",
+              "type": "text"
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "badge"
+        }
+      ],
+      fields: [
+        {
+              "name": "name",
+              "label": "Nombre del perfil PCQ",
+              "type": "text",
+              "required": true
+        },
+        {
+              "name": "router_id",
+              "label": "Router MikroTik",
+              "type": "select",
+              "required": true,
+              "source": "routers",
+              "sourceValue": "id",
+              "sourceLabel": "name",
+              "companion": "router_name"
+        },
+        {
+              "name": "router_name",
+              "label": "Router",
+              "type": "text",
+              "hidden": true
+        },
+        {
+              "name": "type",
+              "label": "Tipo",
+              "type": "select",
+              "options": [
+                    "PCQ",
+                    "Address List",
+                    "Both"
+              ],
+              "required": false
+        },
+        {
+              "name": "rate_down",
+              "label": "Velocidad Bajada (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "rate_up",
+              "label": "Velocidad Subida (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_down",
+              "label": "Ráfaga Bajada (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_up",
+              "label": "Ráfaga Subida (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_threshold_down",
+              "label": "Umbral Ráfaga Bajada (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_threshold_up",
+              "label": "Umbral Ráfaga Subida (kbps)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_time_down",
+              "label": "Tiempo Ráfaga Bajada (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "burst_time_up",
+              "label": "Tiempo Ráfaga Subida (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "priority",
+              "label": "Prioridad (1-8)",
+              "type": "number",
+              "required": false,
+              "placeholder": "8"
+        },
+        {
+              "name": "pcq_classifier",
+              "label": "Clasificador PCQ",
+              "type": "select",
+              "options": [
+                    "dst-address",
+                    "src-address",
+                    "dst-port",
+                    "src-port",
+                    "dst-address,dst-port",
+                    "src-address,src-port"
+              ],
+              "required": false
+        },
+        {
+              "name": "pcq_limit",
+              "label": "Límite PCQ",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "pcq_total_limit",
+              "label": "Límite Total PCQ",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "address_list",
+              "label": "Address List (ej: MOROSOS_ISP)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "customer_id",
+              "label": "ID Cliente (opcional)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "customer_name",
+              "label": "Cliente",
+              "type": "text",
+              "hidden": true
+        },
+        {
+              "name": "comment",
+              "label": "Comentario",
+              "type": "textarea",
+              "required": false
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "select",
+              "options": [
+                    "Activo",
+                    "Inactivo"
+              ],
+              "required": false
+        }
+      ],
+      defaults: {
+        "status": "Activo",
+        "priority": 8,
+        "type": "PCQ"
+      },
+      rowActions: ["test","sync"]
+    },
+    {
+      key: 'freeradius_profiles',
+      integration: 'pending',
+      label: 'Perfiles FreeRADIUS',
+      group: 'Sistema',
+      icon: 'Shield',
+      description: 'Perfiles de autenticación/autorización FreeRADIUS (PPPoE, Hotspot, 802.1X). Mapeo a planes, VLANs, Address Lists y límites de sesión.',
+      codePrefix: 'RDP',
+      search: ["code","name","nas_type","profile_type"],
+      columns: [
+        {
+              "name": "code",
+              "label": "Código",
+              "type": "mono"
+        },
+        {
+              "name": "name",
+              "label": "Perfil",
+              "type": "text"
+        },
+        {
+              "name": "nas_type",
+              "label": "Tipo NAS",
+              "type": "badge"
+        },
+        {
+              "name": "profile_type",
+              "label": "Tipo Perfil",
+              "type": "badge"
+        },
+        {
+              "name": "vlan_id",
+              "label": "VLAN",
+              "type": "text"
+        },
+        {
+              "name": "rate_limit",
+              "label": "Límite Velocidad",
+              "type": "text"
+        },
+        {
+              "name": "session_timeout",
+              "label": "Timeout Sesión",
+              "type": "text"
+        },
+        {
+              "name": "idle_timeout",
+              "label": "Idle Timeout",
+              "type": "text"
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "badge"
+        }
+      ],
+      fields: [
+        {
+              "name": "name",
+              "label": "Nombre del perfil",
+              "type": "text",
+              "required": true
+        },
+        {
+              "name": "description",
+              "label": "Descripción",
+              "type": "textarea",
+              "required": false
+        },
+        {
+              "name": "nas_type",
+              "label": "Tipo de NAS",
+              "type": "select",
+              "options": [
+                    "MikroTik PPPoE",
+                    "MikroTik Hotspot",
+                    "MikroTik DHCP",
+                    "Cisco",
+                    "Juniper",
+                    "Ubiquiti",
+                    "Genérico"
+              ],
+              "required": false
+        },
+        {
+              "name": "profile_type",
+              "label": "Tipo de perfil",
+              "type": "select",
+              "options": [
+                    "PPPoE",
+                    "Hotspot",
+                    "802.1X",
+                    "MAC Auth",
+                    "DHCP"
+              ],
+              "required": false
+        },
+        {
+              "name": "radius_attributes",
+              "label": "Atributos RADIUS (JSON)",
+              "type": "textarea",
+              "required": false,
+              "placeholder": '{"Mikrotik-Rate-Limit": "10M/50M", "Mikrotik-Address-List": "PLAN_50M"}'
+        },
+        {
+              "name": "vlan_id",
+              "label": "VLAN ID",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "rate_limit_down",
+              "label": "Límite Bajada (ej: 50M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "rate_limit_up",
+              "label": "Límite Subida (ej: 10M)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_down",
+              "label": "Ráfaga Bajada",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "burst_up",
+              "label": "Ráfaga Subida",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "session_timeout",
+              "label": "Session-Timeout (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "idle_timeout",
+              "label": "Idle-Timeout (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "interim_update",
+              "label": "Acct-Interim-Interval (s)",
+              "type": "number",
+              "required": false
+        },
+        {
+              "name": "address_list",
+              "label": "Address List (para corte)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "pool_name",
+              "label": "Pool Framed-IP (opcional)",
+              "type": "text",
+              "required": false
+        },
+        {
+              "name": "plan_id",
+              "label": "Plan asociado",
+              "type": "select",
+              "required": false,
+              "source": "plans",
+              "sourceValue": "id",
+              "sourceLabel": "name"
+        },
+        {
+              "name": "plan_name",
+              "label": "Plan",
+              "type": "text",
+              "hidden": true
+        },
+        {
+              "name": "status",
+              "label": "Estado",
+              "type": "select",
+              "options": [
+                    "Activo",
+                    "Inactivo"
+              ],
+              "required": false
+        }
+      ],
+      defaults: {
+        "status": "Activo",
+        "nas_type": "MikroTik PPPoE",
+        "profile_type": "PPPoE"
+      }
+    },
+  {
+    key: 'ipv6_prefixes',
+    label: 'Planificador IPv6',
+    group: 'Sistema',
+    icon: 'Network',
+    description: 'Plan de direccionamiento IPv6: pools, prefijos asignados y calculadora de subredes.',
+    codePrefix: 'V6',
+    search: ["code","prefix","pool_name","assigned_to"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "prefix",
+                "label": "Prefijo",
+                "type": "mono"
+          },
+          {
+                "name": "pool_name",
+                "label": "Pool",
+                "type": "text"
+          },
+          {
+                "name": "size",
+                "label": "Tamaño",
+                "type": "text"
+          },
+          {
+                "name": "assigned_to",
+                "label": "Asignado a",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "prefix",
+                "label": "Prefijo IPv6",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "pool_name",
+                "label": "Nombre del pool",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "size",
+                "label": "/48, /56, /64",
+                "type": "select",
+                "options": [
+                      "/48",
+                      "/56",
+                      "/60",
+                      "/64",
+                      "/128"
+                ],
+                "required": false
+          },
+          {
+                "name": "assigned_to",
+                "label": "Asignado a (cliente/zona/PON)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "parent_prefix",
+                "label": "Prefijo padre",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "type",
+                "label": "Modo",
+                "type": "select",
+                "options": [
+                      "DHCPv6-PD",
+                      "Estático",
+                      "SLAAC"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Disponible",
+                      "Asignado",
+                      "Reservado"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Disponible",
+          "size": "/64",
+          "type": "DHCPv6-PD"
+    },
+  },
+  {
+    key: 'olt_integrations',
+    integration: 'config',
+    label: 'AdminOLT / SmartOLT',
+    group: 'Sistema',
+    icon: 'Cable',
+    description: 'Integración OLT por token: autorizar ONUs, señales, WAN IP y perfiles de velocidad.',
+    codePrefix: 'OLT',
+    search: ["code","name","provider","ip_address","onu_serial"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "OLT / ONU",
+                "type": "text"
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "badge"
+          },
+          {
+                "name": "ip_address",
+                "label": "IP",
+                "type": "mono"
+          },
+          {
+                "name": "onu_serial",
+                "label": "Serial ONU",
+                "type": "mono"
+          },
+          {
+                "name": "signal_dbm",
+                "label": "Señal dBm",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "select",
+                "options": [
+                      "AdminOLT",
+                      "SmartOLT",
+                      "VSOL",
+                      "ZTE",
+                      "Huawei",
+                      "FiberHome"
+                ],
+                "required": false
+          },
+          {
+                "name": "ip_address",
+                "label": "IP de gestión",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "token",
+                "label": "Token de API",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "onu_serial",
+                "label": "Serial ONU",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "onu_id",
+                "label": "ID de servicio",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente asignado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "signal_dbm",
+                "label": "Señal óptica (dBm)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "wan_ip",
+                "label": "WAN IP (IPv4)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "speed_profile",
+                "label": "Perfil de velocidad",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Autorizada",
+                      "Pendiente",
+                      "LOS",
+                      "Desvinculada"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "provider": "AdminOLT"
+    },
+  },
+  {
+    key: 'api_tokens',
+    integration: 'pending',
+    label: 'API de WispHub',
+    group: 'Sistema',
+    icon: 'KeyRound',
+    description: 'Tokens para integrar plataformas externas y desarrollos propios.',
+    codePrefix: 'API',
+    search: ["code","name","token"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Aplicación",
+                "type": "text"
+          },
+          {
+                "name": "token",
+                "label": "Token",
+                "type": "mono"
+          },
+          {
+                "name": "scopes",
+                "label": "Permisos",
+                "type": "text"
+          },
+          {
+                "name": "last_used",
+                "label": "Último uso",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la aplicación",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "token",
+                "label": "Token (Bearer)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "scopes",
+                "label": "Permisos (separados por coma)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "webhook_url",
+                "label": "Webhook de eventos",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "last_used",
+                "label": "Último uso",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "scopes": "read"
+    },
+  },
+  {
+    key: 'tickets',
+    label: 'Lista de Tickets',
+    group: 'Soporte Técnico',
+    icon: 'LifeBuoy',
+    description: 'Reportes de clientes con prioridad, técnico asignado, hoja firmada y respuestas.',
+    codePrefix: 'TKT',
+    search: ["code","customer_name","subject","assigned_to","status","priority"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Ticket",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "subject",
+                "label": "Asunto",
+                "type": "text"
+          },
+          {
+                "name": "priority",
+                "label": "Prioridad",
+                "type": "badge"
+          },
+          {
+                "name": "assigned_to",
+                "label": "Técnico",
+                "type": "text"
+          },
+          {
+                "name": "opened_at",
+                "label": "Apertura",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "subject",
+                "label": "Asunto / Falla",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "priority",
+                "label": "Prioridad",
+                "type": "select",
+                "options": [
+                      "Baja",
+                      "Media",
+                      "Alta",
+                      "Urgente"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Nuevo",
+                      "En proceso",
+                      "Cerrado",
+                      "Resuelto"
+                ],
+                "required": false
+          },
+          {
+                "name": "assigned_to",
+                "label": "Técnico asignado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "opened_at",
+                "label": "Fecha de apertura",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "closed_at",
+                "label": "Fecha de cierre",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "signed_by",
+                "label": "Hoja firmada por",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "description",
+                "label": "Descripción del problema",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "solution",
+                "label": "Solución aplicada",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Nuevo",
+          "priority": "Media",
+          "opened_at": "2026-10-25"
+    },
+  },
+  {
+    key: 'ticket_subjects',
+    label: 'Asuntos y Fallas',
+    group: 'Soporte Técnico',
+    icon: 'ListChecks',
+    description: 'Catálogo de asuntos y fallas para clasificar tickets y generar estadísticas.',
+    codePrefix: 'ASU',
+    search: ["code","name","category","area"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Asunto",
+                "type": "text"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "area",
+                "label": "Área",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Asunto / Falla",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "select",
+                "options": [
+                      "Internet",
+                      "WiFi",
+                      "Televisión",
+                      "Telefonía",
+                      "Facturación",
+                      "Instalación",
+                      "Otro"
+                ],
+                "required": false
+          },
+          {
+                "name": "area",
+                "label": "Área responsable",
+                "type": "select",
+                "options": [
+                      "Soporte",
+                      "Redes",
+                      "Finanzas",
+                      "Ventas",
+                      "NOC"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "area": "Soporte",
+          "category": "Internet"
+    },
+  },
+  {
+    key: 'warehouse_items',
+    label: 'Stock Dispositivos de Red',
+    group: 'Almacén',
+    icon: 'Boxes',
+    description: 'Existencias de equipos de red con mínimos, costo, precio y proveedor.',
+    codePrefix: 'ART',
+    search: ["code","name","brand","model","category","supplier"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Artículo",
+                "type": "text"
+          },
+          {
+                "name": "brand",
+                "label": "Marca",
+                "type": "text"
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "text"
+          },
+          {
+                "name": "quantity",
+                "label": "Existencia",
+                "type": "number"
+          },
+          {
+                "name": "min_stock",
+                "label": "Mínimo",
+                "type": "number"
+          },
+          {
+                "name": "cost",
+                "label": "Costo",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del artículo",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "select",
+                "options": [
+                      "Antena",
+                      "Router",
+                      "ONU",
+                      "OLT",
+                      "Switch",
+                      "Cable",
+                      "Conector",
+                      "Fuente",
+                      "Otro"
+                ],
+                "required": false
+          },
+          {
+                "name": "brand",
+                "label": "Marca",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "quantity",
+                "label": "Existencia",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "min_stock",
+                "label": "Stock mínimo",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "cost",
+                "label": "Costo",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "price",
+                "label": "Precio de venta",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "supplier",
+                "label": "Proveedor",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "location",
+                "label": "Ubicación / Sucursal",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Disponible",
+                      "Bajo stock",
+                      "Agotado",
+                      "Descontinuado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Disponible",
+          "quantity": 0,
+          "min_stock": 0,
+          "cost": 0,
+          "price": 0
+    },
+  },
+  {
+    key: 'other_items',
+    label: 'Otros Artículos',
+    group: 'Almacén',
+    icon: 'Package',
+    description: 'Artículos no de red: herramienta, consumibles y accesorios.',
+    codePrefix: 'OA',
+    search: ["code","name","category"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Artículo",
+                "type": "text"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "quantity",
+                "label": "Existencia",
+                "type": "number"
+          },
+          {
+                "name": "cost",
+                "label": "Costo",
+                "type": "money"
+          },
+          {
+                "name": "price",
+                "label": "Precio",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "quantity",
+                "label": "Existencia",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "cost",
+                "label": "Costo",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "price",
+                "label": "Precio",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "supplier",
+                "label": "Proveedor",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Disponible",
+                      "Bajo stock",
+                      "Agotado"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Disponible",
+          "quantity": 0,
+          "cost": 0,
+          "price": 0
+    },
+  },
+  {
+    key: 'other_services',
+    label: 'Otros Servicios / Productos',
+    group: 'Almacén',
+    icon: 'BadgeDollarSign',
+    description: 'Servicios recurrentes y productos cobrables a clientes (Netflix, TV, equipos en abonos).',
+    codePrefix: 'OS',
+    search: ["code","name","type"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "price",
+                "label": "Precio",
+                "type": "money"
+          },
+          {
+                "name": "billing",
+                "label": "Cobro",
+                "type": "badge"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "Producto",
+                      "Servicio"
+                ],
+                "required": false
+          },
+          {
+                "name": "price",
+                "label": "Precio",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "billing",
+                "label": "Tipo de cobro",
+                "type": "select",
+                "options": [
+                      "Único",
+                      "Recurrente",
+                      "En abonos"
+                ],
+                "required": false
+          },
+          {
+                "name": "tax_pct",
+                "label": "Impuesto (%)",
+                "type": "percent",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Descripción",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "type": "Servicio",
+          "billing": "Recurrente",
+          "price": 0
+    },
+  },
+  {
+    key: 'suppliers',
+    label: 'Proveedores',
+    group: 'Almacén',
+    icon: 'Truck',
+    description: 'Proveedores de equipos y servicios, con datos fiscales y de contacto.',
+    codePrefix: 'PROV',
+    search: ["code","name","contact","tax_id"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Proveedor",
+                "type": "text"
+          },
+          {
+                "name": "contact",
+                "label": "Contacto",
+                "type": "text"
+          },
+          {
+                "name": "phone",
+                "label": "Teléfono",
+                "type": "mono"
+          },
+          {
+                "name": "email",
+                "label": "Correo",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Razón social",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "contact",
+                "label": "Persona de contacto",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "phone",
+                "label": "Teléfono",
+                "type": "tel",
+                "required": false
+          },
+          {
+                "name": "email",
+                "label": "Correo",
+                "type": "email",
+                "required": false
+          },
+          {
+                "name": "tax_id",
+                "label": "RFC / NIT / RUC",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "address",
+                "label": "Dirección",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "payment_terms",
+                "label": "Condiciones de pago",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo"
+    },
+  },
+  {
+    key: 'branches',
+    label: 'Sucursales',
+    group: 'Almacén',
+    icon: 'Building2',
+    description: 'Sucursales y almacenes donde se distribuye el stock y el personal.',
+    codePrefix: 'SUC',
+    search: ["code","name","manager","city"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Sucursal",
+                "type": "text"
+          },
+          {
+                "name": "city",
+                "label": "Ciudad",
+                "type": "text"
+          },
+          {
+                "name": "manager",
+                "label": "Encargado",
+                "type": "text"
+          },
+          {
+                "name": "phone",
+                "label": "Teléfono",
+                "type": "mono"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "city",
+                "label": "Ciudad",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "address",
+                "label": "Dirección",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "manager",
+                "label": "Encargado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "phone",
+                "label": "Teléfono",
+                "type": "tel",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo"
+    },
+  },
+  {
+    key: 'warehouse_logs',
+    label: 'Log Almacén',
+    group: 'Almacén',
+    icon: 'History',
+    description: 'Movimientos de entrada, salida, ajuste y asignación de artículos.',
+    codePrefix: 'MOV',
+    search: ["code","item_code","movement","staff","reference"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "item_code",
+                "label": "Artículo",
+                "type": "mono"
+          },
+          {
+                "name": "movement",
+                "label": "Movimiento",
+                "type": "badge"
+          },
+          {
+                "name": "quantity",
+                "label": "Cantidad",
+                "type": "number"
+          },
+          {
+                "name": "staff",
+                "label": "Responsable",
+                "type": "text"
+          },
+          {
+                "name": "branch",
+                "label": "Sucursal",
+                "type": "text"
+          },
+          {
+                "name": "created_at",
+                "label": "Fecha",
+                "type": "date"
+          }
+    ],
+    fields: [
+          {
+                "name": "item_code",
+                "label": "Artículo (código)",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "movement",
+                "label": "Movimiento",
+                "type": "select",
+                "options": [
+                      "Entrada",
+                      "Salida",
+                      "Ajuste",
+                      "Asignación"
+                ],
+                "required": false
+          },
+          {
+                "name": "quantity",
+                "label": "Cantidad",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "staff",
+                "label": "Responsable",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "branch",
+                "label": "Sucursal",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "reference",
+                "label": "Referencia / Documento",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "created_at",
+                "label": "Fecha",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "movement": "Entrada",
+          "quantity": 0,
+          "created_at": "2026-10-25"
+    },
+  },
+  {
+    key: 'staff',
+    label: 'Usuarios Staff',
+    group: 'Staff',
+    icon: 'UsersRound',
+    description: 'Usuarios con rol, permisos por zona/RB, sucursal y acceso al sistema.',
+    codePrefix: 'STF',
+    search: ["code","name","email","role","username"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Colaborador",
+                "type": "text"
+          },
+          {
+                "name": "role",
+                "label": "Rol",
+                "type": "badge"
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text"
+          },
+          {
+                "name": "branch",
+                "label": "Sucursal",
+                "type": "text"
+          },
+          {
+                "name": "email",
+                "label": "Correo",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre completo",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "username",
+                "label": "Usuario de acceso",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "password",
+                "label": "Contraseña",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "email",
+                "label": "Correo",
+                "type": "email",
+                "required": false
+          },
+          {
+                "name": "phone",
+                "label": "Teléfono",
+                "type": "tel",
+                "required": false
+          },
+          {
+                "name": "role",
+                "label": "Rol",
+                "type": "select",
+                "options": [
+                      "Administrador",
+                      "Gerente General",
+                      "Gerente de Finanzas",
+                      "Gerente de Soporte Técnico",
+                      "Auxiliar de Finanzas",
+                      "Auxiliar Contable",
+                      "Técnico de Oficina",
+                      "Técnico Instalador",
+                      "Asesor de Ventas",
+                      "Almacenista",
+                      "Cobrador",
+                      "Cajero",
+                      "Punto de Venta HotSpot"
+                ],
+                "required": false
+          },
+          {
+                "name": "zone",
+                "label": "Zona asignada",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "router",
+                "label": "Router / RB",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "branch",
+                "label": "Sucursal",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo",
+                      "Suspendido"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "role": "Técnico de Oficina"
+    },
+  },
+  {
+    key: 'roles',
+    label: 'Roles y Permisos',
+    group: 'Staff',
+    icon: 'ShieldCheck',
+    description: 'Matriz de permisos por rol: facturación, clientes, router, almacén y reportes.',
+    codePrefix: 'ROL',
+    search: ["code","name","level"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Rol",
+                "type": "text"
+          },
+          {
+                "name": "level",
+                "label": "Nivel",
+                "type": "text"
+          },
+          {
+                "name": "modules",
+                "label": "Módulos permitidos",
+                "type": "text"
+          },
+          {
+                "name": "users_count",
+                "label": "Usuarios",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del rol",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "level",
+                "label": "Nivel",
+                "type": "select",
+                "options": [
+                      "Administrador",
+                      "Finanzas",
+                      "Técnico",
+                      "Ventas",
+                      "Cobrador",
+                      "Solo lectura"
+                ],
+                "required": false
+          },
+          {
+                "name": "modules",
+                "label": "Módulos permitidos (separados por coma)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "users_count",
+                "label": "Usuarios asignados",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Descripción",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "level": "Técnico",
+          "users_count": 0
+    },
+  },
+  {
+    key: 'email_settings',
+    integration: 'pending',
+    label: 'Servidor de Correo',
+    group: 'Ajustes',
+    icon: 'Mail',
+    description: 'SMTP para envío de facturas, avisos y notificaciones (Gmail, SendPulse, SMTP2GO).',
+    codePrefix: 'SMTP',
+    search: ["code","name","host","from_email"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Cuenta",
+                "type": "text"
+          },
+          {
+                "name": "host",
+                "label": "Host",
+                "type": "text"
+          },
+          {
+                "name": "port",
+                "label": "Puerto",
+                "type": "number"
+          },
+          {
+                "name": "from_email",
+                "label": "Remitente",
+                "type": "text"
+          },
+          {
+                "name": "encryption",
+                "label": "Cifrado",
+                "type": "badge"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre de la cuenta",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "host",
+                "label": "Host SMTP",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "port",
+                "label": "Puerto",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "username",
+                "label": "Usuario",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "password",
+                "label": "Contraseña",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "encryption",
+                "label": "Cifrado",
+                "type": "select",
+                "options": [
+                      "TLS",
+                      "SSL",
+                      "Ninguno"
+                ],
+                "required": false
+          },
+          {
+                "name": "from_email",
+                "label": "Correo remitente",
+                "type": "email",
+                "required": false
+          },
+          {
+                "name": "from_name",
+                "label": "Nombre remitente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "daily_limit",
+                "label": "Límite diario",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "port": 587,
+          "encryption": "TLS"
+    },
+  },
+  {
+    key: 'notification_settings',
+    integration: 'pending',
+    label: 'Mensajería SMS / WhatsApp',
+    group: 'Ajustes',
+    icon: 'MessageCircle',
+    description: 'Pasarelas de mensajería: Waboxapp, WIIVO, CRMInbox, Meta, Nexmo, SMSMasivos, Hablame.',
+    codePrefix: 'MSG',
+    search: ["code","name","channel","provider"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Canal",
+                "type": "text"
+          },
+          {
+                "name": "channel",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "badge"
+          },
+          {
+                "name": "sender",
+                "label": "Remitente",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del canal",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "channel",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "WhatsApp",
+                      "SMS",
+                      "Push",
+                      "Web Push",
+                      "Correo"
+                ],
+                "required": false
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "select",
+                "options": [
+                      "Waboxapp",
+                      "WIIVO",
+                      "CRMInbox",
+                      "WhatsApp Genérico",
+                      "Meta API Oficial",
+                      "Nexmo",
+                      "SMSMasivos",
+                      "Hablame",
+                      "PBX Hosting",
+                      "1980tic",
+                      "SMTP",
+                      "Gmail",
+                      "SendPulse"
+                ],
+                "required": false
+          },
+          {
+                "name": "api_key",
+                "label": "API Key / Token",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "sender",
+                "label": "Remitente / Número",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo",
+                      "Prueba"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "channel": "WhatsApp",
+          "provider": "WhatsApp Genérico"
+    },
+  },
+  {
+    key: 'templates',
+    integration: 'pending',
+    label: 'Editor de Plantillas',
+    group: 'Ajustes',
+    icon: 'LayoutTemplate',
+    description: 'Plantillas editables de Factura, Recibo, Aviso de Pago, SMS, WhatsApp, Ticket y Contrato.',
+    codePrefix: 'TPL',
+    search: ["code","name","type"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Plantilla",
+                "type": "text"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "subject",
+                "label": "Asunto",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "Factura",
+                      "Recibo",
+                      "Aviso de Pago",
+                      "Aviso de Corte",
+                      "SMS",
+                      "WhatsApp",
+                      "Correo",
+                      "Ticket",
+                      "Ficha HotSpot",
+                      "Contrato"
+                ],
+                "required": false
+          },
+          {
+                "name": "subject",
+                "label": "Asunto / Encabezado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "body",
+                "label": "Cuerpo (usa tags tipo {cliente}, {total}, {fecha_corte})",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "is_default",
+                "label": "Plantilla por defecto",
+                "type": "select",
+                "options": [
+                      "Sí",
+                      "No"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "type": "Aviso de Pago",
+          "is_default": "No"
+    },
+  },
+  {
+    key: 'screen_notices',
+    integration: 'pending',
+    label: 'Avisos en Pantalla',
+    group: 'Ajustes',
+    icon: 'MonitorPlay',
+    description: 'Avisos de pago/corte/mantenimiento mostrados al cliente al navegar.',
+    codePrefix: 'AVS',
+    search: ["code","name","type","title"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Aviso",
+                "type": "text"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "title",
+                "label": "Título",
+                "type": "text"
+          },
+          {
+                "name": "duration_seconds",
+                "label": "Duración (s)",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre interno",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "select",
+                "options": [
+                      "Aviso de pago",
+                      "Aviso de corte",
+                      "Mantenimiento",
+                      "Personalizado"
+                ],
+                "required": false
+          },
+          {
+                "name": "title",
+                "label": "Título mostrado",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "message",
+                "label": "Mensaje",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "duration_seconds",
+                "label": "Duración (segundos)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "show_total",
+                "label": "Mostrar total a pagar",
+                "type": "select",
+                "options": [
+                      "Sí",
+                      "No"
+                ],
+                "required": false
+          },
+          {
+                "name": "active_from",
+                "label": "Vigente desde",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "active_to",
+                "label": "Vigente hasta",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "type": "Aviso de pago",
+          "duration_seconds": 10,
+          "show_total": "Sí"
+    },
+  },
+  {
+    key: 'notifications',
+    integration: 'pending',
+    label: 'Notificaciones Enviadas',
+    group: 'Ajustes',
+    icon: 'BellRing',
+    description: 'Bandeja de salida de notificaciones por WhatsApp, SMS, Push y correo.',
+    codePrefix: 'NTF',
+    search: ["code","recipient","subject","channel","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "recipient",
+                "label": "Destinatario",
+                "type": "text"
+          },
+          {
+                "name": "channel",
+                "label": "Canal",
+                "type": "badge"
+          },
+          {
+                "name": "subject",
+                "label": "Asunto",
+                "type": "text"
+          },
+          {
+                "name": "sent_at",
+                "label": "Enviado",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "recipient",
+                "label": "Destinatario",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "channel",
+                "label": "Canal",
+                "type": "select",
+                "options": [
+                      "WhatsApp",
+                      "SMS",
+                      "Push",
+                      "Web Push",
+                      "Correo"
+                ],
+                "required": false
+          },
+          {
+                "name": "subject",
+                "label": "Asunto",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "body",
+                "label": "Mensaje",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "module",
+                "label": "Módulo origen",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "sent_at",
+                "label": "Fecha de envío",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Enviado",
+                      "Fallido",
+                      "Leído"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "channel": "WhatsApp",
+          "sent_at": "2026-10-25"
+    },
+  },
+  {
+    key: 'ai_settings',
+    integration: 'config',
+    label: 'Ajustes de Inteligencia Artificial',
+    group: 'Ajustes',
+    icon: 'Sparkles',
+    description: 'Configuración del asistente IA: proveedor, modelo y funciones habilitadas.',
+    codePrefix: 'IA',
+    search: ["code","name","provider","model"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Configuración",
+                "type": "text"
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "badge"
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "mono"
+          },
+          {
+                "name": "features",
+                "label": "Funciones",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "provider",
+                "label": "Proveedor",
+                "type": "select",
+                "options": [
+                      "Google Gemini",
+                      "OpenAI",
+                      "Anthropic",
+                      "Local"
+                ],
+                "required": false
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "api_key",
+                "label": "API Key",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "features",
+                "label": "Funciones habilitadas",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "provider": "Google Gemini",
+          "model": "gemini-3.8-flash"
+    },
+  },
+  {
+    key: 'licenses',
+    integration: 'pending',
+    label: 'Licencias',
+    group: 'Mi empresa',
+    icon: 'BadgeCheck',
+    description: 'Licencia del sistema, límite de clientes contratado y vencimiento.',
+    codePrefix: 'LIC',
+    search: ["code","plan","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "plan",
+                "label": "Plan",
+                "type": "text"
+          },
+          {
+                "name": "client_limit",
+                "label": "Límite Clientes",
+                "type": "number"
+          },
+          {
+                "name": "price",
+                "label": "Precio",
+                "type": "money"
+          },
+          {
+                "name": "expires_at",
+                "label": "Vence",
+                "type": "date"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "plan",
+                "label": "Plan contratado",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "client_limit",
+                "label": "Límite de clientes",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "price",
+                "label": "Precio mensual",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "billing_cycle",
+                "label": "Ciclo",
+                "type": "select",
+                "options": [
+                      "Mensual",
+                      "Trimestral",
+                      "Anual"
+                ],
+                "required": false
+          },
+          {
+                "name": "expires_at",
+                "label": "Fecha de vencimiento",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activa",
+                      "Por vencer",
+                      "Vencida",
+                      "Cancelada"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activa",
+          "billing_cycle": "Mensual",
+          "price": 0,
+          "client_limit": 0
+    },
+  },
+  {
+    key: 'routers',
+    integration: 'real',
+    label: 'Routers MikroTik',
+    group: 'Sistema',
+    icon: 'Router',
+    description: 'RouterBOARDs administrados por API RouterOS: Simple Queue, PCQ, PPPoE, Hotspot.',
+    codePrefix: 'RB',
+    search: ["code","name","ip_address","board_name","routeros_version"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Router",
+                "type": "text"
+          },
+          {
+                "name": "ip_address",
+                "label": "IP Gestión",
+                "type": "mono"
+          },
+          {
+                "name": "routeros_version",
+                "label": "RouterOS",
+                "type": "text"
+          },
+          {
+                "name": "board_name",
+                "label": "Board",
+                "type": "text"
+          },
+          {
+                "name": "location",
+                "label": "Ubicación",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del router",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "ip_address",
+                "label": "IP de gestión",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "api_port",
+                "label": "Puerto API",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "username",
+                "label": "Usuario API",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "password",
+                "label": "Contraseña API",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "routeros_version",
+                "label": "Versión RouterOS",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "board_name",
+                "label": "Modelo / Board",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "location",
+                "label": "Ubicación",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "location_gps",
+                "label": "Coordenadas GPS",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "zone",
+                "label": "Zona",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "control_mode",
+                "label": "Modo de control de clientes",
+                "type": "select",
+                "options": [
+                      "Simple Queue",
+                      "PCQ + Address List",
+                      "PPPoE",
+                      "Hotspot",
+                      "DHCP Leases",
+                      "IP Bindings"
+                ],
+                "required": false
+          },
+          {
+                "name": "active_pppoe",
+                "label": "Sesiones PPPoE activas",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Conectado",
+                      "Desconectado",
+                      "Mantenimiento"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Conectado",
+          "api_port": 8728,
+          "control_mode": "PPPoe",
+          "active_pppoe": 0
+    },
+    rowActions: ["test"],
+  },
+  {
+    key: 'olts',
+    integration: 'real',
+    label: 'OLTs FTTH',
+    group: 'Sistema',
+    icon: 'Cable',
+    description: 'Cabeceras GPON/EPON (ZTE, Huawei, VSOL, FiberHome). Conectividad real por SNMP (lectura) y Telnet (gesti�n). Requiere IP, comunidad SNMP y credenciales Telnet.',
+    codePrefix: 'OLT',
+    search: ["code","name","brand","model","ip_address","driver_class","sys_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "C�digo",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "OLT",
+                "type": "text"
+          },
+          {
+                "name": "brand",
+                "label": "Marca",
+                "type": "text"
+          },
+          {
+                "name": "ip_address",
+                "label": "IP Gesti�n",
+                "type": "mono"
+          },
+          {
+                "name": "sys_name",
+                "label": "Nombre SNMP",
+                "type": "text"
+          },
+          {
+                "name": "onus_active",
+                "label": "ONUs",
+                "type": "number"
+          },
+          {
+                "name": "temperature_c",
+                "label": "Temp",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "brand",
+                "label": "Marca",
+                "type": "select",
+                "options": [
+                      "ZTE",
+                      "Huawei",
+                      "VSOL",
+                      "FiberHome",
+                      "V-SOL",
+                      "Otro"
+                ],
+                "required": false
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "ip_address",
+                "label": "IP de gesti�n",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snmp_port",
+                "label": "Puerto SNMP",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "snmp_community",
+                "label": "Comunidad SNMP (RO)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snmp_rw_community",
+                "label": "Comunidad SNMP (RW)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snmp_version",
+                "label": "Versi??n SNMP",
+                "type": "select",
+                "options": [
+                      "v1",
+                      "v2c",
+                      "v3"
+                ],
+                "required": false
+          },
+          {
+                "name": "snmpv3_user",
+                "label": "Usuario SNMPv3",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snmpv3_auth_proto",
+                "label": "Auth protocol",
+                "type": "select",
+                "options": [
+                      "MD5",
+                      "SHA"
+                ],
+                "required": false
+          },
+          {
+                "name": "snmpv3_auth_pass",
+                "label": "Auth password",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "snmpv3_priv_proto",
+                "label": "Priv protocol",
+                "type": "select",
+                "options": [
+                      "None",
+                      "DES",
+                      "AES"
+                ],
+                "required": false
+          },
+          {
+                "name": "snmpv3_priv_pass",
+                "label": "Priv password",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "snmpv3_engine_id",
+                "label": "Engine ID (opcional)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snmpv3_context",
+                "label": "Context (opcional)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "telnet_port",
+                "label": "Puerto Telnet",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "ssh_port",
+                "label": "Puerto SSH",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "username",
+                "label": "Usuario Telnet/SSH",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "password",
+                "label": "Contrase�a Telnet/SSH",
+                "type": "password",
+                "required": false
+          },
+          {
+                "name": "driver_class",
+                "label": "Driver",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "pon_ports_total",
+                "label": "Puertos PON",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "onus_active",
+                "label": "ONUs activas",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "onus_los",
+                "label": "ONUs en LOS",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "temperature_c",
+                "label": "Temperatura �C",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "location",
+                "label": "Ubicaci�n",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Conectado",
+                      "Desconectado",
+                      "Mantenimiento"
+                ],
+                "required": false
+          },
+          {
+                "name": "sys_name",
+                "label": "Nombre SNMP",
+                "type": "text",
+                "hidden": true
+          },
+          {
+                "name": "sys_descr",
+                "label": "Descripci�n SNMP",
+                "type": "text",
+                "hidden": true
+          },
+          {
+                "name": "uptime",
+                "label": "Uptime",
+                "type": "text",
+                "hidden": true
+          },
+          {
+                "name": "if_number",
+                "label": "Interfaces",
+                "type": "number",
+                "hidden": true
+          },
+          {
+                "name": "last_sync_at",
+                "label": "�ltima sincronizaci�n",
+                "type": "text",
+                "hidden": true
+          }
+    ],
+    defaults: {
+          "status": "Conectado",
+          "snmp_port": 161,
+          "telnet_port": 23,
+          "ssh_port": 22,
+          "pon_ports_total": 0,
+          "onus_active": 0,
+          "onus_los": 0,
+          "temperature_c": 0,
+          "snmp_community": "public",
+          "snmp_version": "v2c"
+    },
+    rowActions: ["test","sync","command"],
+  },
+  {
+    key: 'olt_alarms',
+    label: 'Alarmas OLT',
+    group: 'Sistema',
+    icon: 'AlertTriangle',
+    description: 'Alarmas y traps SNMP recibidos de las OLT (LOS, offline, power, temperatura). Origen: polling SNMP o trap receiver (UDP 162 reenviado por HTTPS).',
+    codePrefix: 'ALM',
+    search: ["code","olt_name","severity","type","description"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text"
+          },
+          {
+                "name": "severity",
+                "label": "Severidad",
+                "type": "badge"
+          },
+          {
+                "name": "type",
+                "label": "Tipo",
+                "type": "text"
+          },
+          {
+                "name": "description",
+                "label": "Descripción",
+                "type": "text"
+          },
+          {
+                "name": "received_at",
+                "label": "Recibida",
+                "type": "date"
+          }
+    ],
+    fields: [
+          {
+                "name": "olt_id",
+                "label": "ID de OLT",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "severity",
+                "label": "Severidad",
+                "type": "select",
+                "options": [
+                      "critical",
+                      "major",
+                      "minor",
+                      "warning",
+                      "info"
+                ],
+                "required": false
+          },
+          {
+                "name": "type",
+                "label": "Tipo de alarma",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "description",
+                "label": "Descripción",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "source_ip",
+                "label": "IP origen",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "trap_oid",
+                "label": "OID del trap",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "received_at",
+                "label": "Recibida (fecha/hora)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activa",
+                      "Reconocida",
+                      "Cerrada"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "severity": "warning",
+          "status": "Activa",
+          "received_at": "2026-10-25 06:02:40"
+    },
+  },
+  {
+    key: 'olt_onus',
+    label: 'ONUs de OLT',
+    group: 'Sistema',
+    icon: 'Cpu',
+    description: 'Estado actual de las ONUs detectadas por el colector on-prem (serial, MAC, potencias, distancia).',
+    codePrefix: 'ONU',
+    search: ["code","serial","mac","olt_name","oper_state"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text"
+          },
+          {
+                "name": "serial",
+                "label": "Serial",
+                "type": "text"
+          },
+          {
+                "name": "mac",
+                "label": "MAC",
+                "type": "mono"
+          },
+          {
+                "name": "oper_state",
+                "label": "Estado",
+                "type": "badge"
+          },
+          {
+                "name": "rx_power_dbm",
+                "label": "Rx (dBm)",
+                "type": "text"
+          },
+          {
+                "name": "tx_power_dbm",
+                "label": "Tx (dBm)",
+                "type": "text"
+          },
+          {
+                "name": "distance_m",
+                "label": "Distancia (m)",
+                "type": "text"
+          }
+    ],
+    fields: [
+          {
+                "name": "olt_id",
+                "label": "ID de OLT",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "pon_port",
+                "label": "Puerto PON",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "index",
+                "label": "Índice",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "serial",
+                "label": "Serial",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "mac",
+                "label": "MAC",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "model",
+                "label": "Modelo",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "admin_state",
+                "label": "Estado admin",
+                "type": "select",
+                "options": [
+                      "active",
+                      "standby",
+                      "shutdown",
+                      "unknown"
+                ],
+                "required": false
+          },
+          {
+                "name": "oper_state",
+                "label": "Estado operativo",
+                "type": "select",
+                "options": [
+                      "online",
+                      "offline",
+                      "los",
+                      "deregistered",
+                      "unknown"
+                ],
+                "required": false
+          },
+          {
+                "name": "rx_power_dbm",
+                "label": "Rx (dBm)",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "tx_power_dbm",
+                "label": "Tx (dBm)",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "distance_m",
+                "label": "Distancia (m)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "last_down_cause",
+                "label": "Última causa de caída",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "last_seen",
+                "label": "Visto por última vez",
+                "type": "text",
+                "required": false
+          }
+    ],
+    defaults: {
+          "admin_state": "active",
+          "oper_state": "unknown"
+    },
+  },
+  {
+    key: 'olt_metrics',
+    label: 'Métricas de OLT',
+    group: 'Sistema',
+    icon: 'BarChart3',
+    description: 'Snapshots de polling del colector on-prem: uptime, puertos PON, ONUs, potencias.',
+    codePrefix: 'MET',
+    search: ["code","olt_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text"
+          },
+          {
+                "name": "ok",
+                "label": "OK",
+                "type": "text"
+          },
+          {
+                "name": "latency_ms",
+                "label": "Latencia (ms)",
+                "type": "text"
+          },
+          {
+                "name": "pon_count",
+                "label": "PON",
+                "type": "text"
+          },
+          {
+                "name": "onu_count",
+                "label": "ONU",
+                "type": "text"
+          },
+          {
+                "name": "polled_at",
+                "label": "Polleado",
+                "type": "date"
+          }
+    ],
+    fields: [
+          {
+                "name": "olt_id",
+                "label": "ID de OLT",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "olt_name",
+                "label": "OLT",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "ok",
+                "label": "OK",
+                "type": "checkbox",
+                "required": false
+          },
+          {
+                "name": "latency_ms",
+                "label": "Latencia (ms)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "error",
+                "label": "Error",
+                "type": "textarea",
+                "required": false
+          },
+          {
+                "name": "uptime_seconds",
+                "label": "Uptime (s)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "pon_count",
+                "label": "Puertos PON",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "onu_count",
+                "label": "ONUs",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "polled_at",
+                "label": "Polleado (fecha/hora)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "snapshot",
+                "label": "Snapshot JSON",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "ok": true,
+          "polled_at": "2026-10-25 06:02:40"
+    },
+  },
+  {
+    key: 'plans',
+    label: 'Planes de Internet',
+    group: 'Sistema',
+    icon: 'Gauge',
+    description: 'Planes Simple Queue, PCQ + Address List, PPPoE y Hotspot, con ráfagas (burst).',
+    codePrefix: 'PLN',
+    search: ["code","name","mikrotik_profile","service_type"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Plan",
+                "type": "text"
+          },
+          {
+                "name": "download_mbps",
+                "label": "Descarga",
+                "type": "number"
+          },
+          {
+                "name": "upload_mbps",
+                "label": "Subida",
+                "type": "number"
+          },
+          {
+                "name": "price_monthly",
+                "label": "Precio",
+                "type": "money"
+          },
+          {
+                "name": "service_type",
+                "label": "Tipo",
+                "type": "badge"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del plan",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "download_mbps",
+                "label": "Descarga (Mbps)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "upload_mbps",
+                "label": "Subida (Mbps)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "price_monthly",
+                "label": "Precio mensual",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "installation_fee",
+                "label": "Cargo de instalación",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "service_type",
+                "label": "Tipo de control",
+                "type": "select",
+                "options": [
+                      "Simple Queue",
+                      "PCQ + Address List",
+                      "PPPoE",
+                      "Hotspot",
+                      "IPv6 PPPoE"
+                ],
+                "required": false
+          },
+          {
+                "name": "mikrotik_profile",
+                "label": "Perfil MikroTik",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "pcq_rate",
+                "label": "Velocidad PCQ",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "burst_download",
+                "label": "Burst descarga",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "burst_upload",
+                "label": "Burst subida",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "reuse",
+                "label": "Reuso / Agregación",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "vlan_id",
+                "label": "VLAN",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "ipv6_prefix",
+                "label": "Prefijo IPv6",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "download_mbps": 0,
+          "upload_mbps": 0,
+          "price_monthly": 0,
+          "installation_fee": 0,
+          "service_type": "PPPoe"
+    },
+  },
+  {
+    key: 'bank_accounts',
+    label: 'Cuentas Bancarias',
+    group: 'Finanzas',
+    icon: 'Landmark',
+    description: 'Cuentas bancarias mostradas al cliente para reportar pagos.',
+    codePrefix: 'CTA',
+    search: ["code","bank_name","account_number","holder_name"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "bank_name",
+                "label": "Banco",
+                "type": "text"
+          },
+          {
+                "name": "account_type",
+                "label": "Tipo",
+                "type": "text"
+          },
+          {
+                "name": "account_number",
+                "label": "Cuenta",
+                "type": "mono"
+          },
+          {
+                "name": "currency",
+                "label": "Moneda",
+                "type": "text"
+          },
+          {
+                "name": "holder_name",
+                "label": "Titular",
+                "type": "text"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "bank_name",
+                "label": "Banco",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "account_label",
+                "label": "Etiqueta",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "account_number",
+                "label": "Número de cuenta",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "account_type",
+                "label": "Tipo de cuenta",
+                "type": "select",
+                "options": [
+                      "Ahorro",
+                      "Corriente",
+                      "Clabe",
+                      "Wallet"
+                ],
+                "required": false
+          },
+          {
+                "name": "currency",
+                "label": "Moneda",
+                "type": "select",
+                "options": [
+                      "USD",
+                      "MXN",
+                      "COP",
+                      "ARS",
+                      "CLP",
+                      "PEN",
+                      "GTQ",
+                      "DOP",
+                      "VES"
+                ],
+                "required": false
+          },
+          {
+                "name": "holder_name",
+                "label": "Titular",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Activo",
+                      "Inactivo"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Activo",
+          "currency": "USD",
+          "account_type": "Ahorro"
+    },
+  },
+  {
+    key: 'collection_cards',
+    integration: 'pending',
+    label: 'Tarjetas de Cobranza',
+    group: 'Finanzas',
+    icon: 'HandCoins',
+    description: 'Tarjetas de cobro asignadas a cobradores/PDV para registrar recaudación en campo.',
+    codePrefix: 'TCB',
+    search: ["code","collector","route","customer_name","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "collector",
+                "label": "Cobrador",
+                "type": "text"
+          },
+          {
+                "name": "route",
+                "label": "Ruta",
+                "type": "text"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "amount_due",
+                "label": "Por cobrar",
+                "type": "money"
+          },
+          {
+                "name": "collected",
+                "label": "Cobrado",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "collector",
+                "label": "Cobrador",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "route",
+                "label": "Ruta / Zona",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "invoice_number",
+                "label": "Factura",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "amount_due",
+                "label": "Monto por cobrar",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "collected",
+                "label": "Monto cobrado",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "due_date",
+                "label": "Fecha de cobro",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "payment_method",
+                "label": "Forma de pago",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Pendiente",
+                      "Cobrada",
+                      "No cobrada",
+                      "Cancelada"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "amount_due": 0,
+          "collected": 0,
+          "due_date": "2026-10-25"
+    },
+  },
+  {
+    key: 'depreciations',
+    label: 'Activos Fijos y Depreciaciones',
+    group: 'Finanzas',
+    icon: 'PiggyBank',
+    description: 'Activos de la empresa con su vida útil, deprecación mensual y valor en libros.',
+    codePrefix: 'DEP',
+    search: ["code","asset_name","category","location"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "asset_name",
+                "label": "Activo",
+                "type": "text"
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "text"
+          },
+          {
+                "name": "purchase_cost",
+                "label": "Costo",
+                "type": "money"
+          },
+          {
+                "name": "useful_life_months",
+                "label": "Vida útil (m)",
+                "type": "number"
+          },
+          {
+                "name": "monthly_depreciation",
+                "label": "Deprec. mensual",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "asset_name",
+                "label": "Nombre del activo",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "category",
+                "label": "Categoría",
+                "type": "select",
+                "options": [
+                      "Equipo de Red",
+                      "Vehículo",
+                      "Mobiliario",
+                      "Herramienta",
+                      "Inmueble",
+                      "Software",
+                      "Otro"
+                ],
+                "required": false
+          },
+          {
+                "name": "serial",
+                "label": "Serie / Placa",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "purchase_date",
+                "label": "Fecha de compra",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "purchase_cost",
+                "label": "Costo de adquisición",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "residual_value",
+                "label": "Valor residual",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "useful_life_months",
+                "label": "Vida útil (meses)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "monthly_depreciation",
+                "label": "Depreciación mensual",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "accumulated_depreciation",
+                "label": "Depreciación acumulada",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "book_value",
+                "label": "Valor en libros",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "location",
+                "label": "Ubicación / Sucursal",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "En uso",
+                      "Depreciado",
+                      "Baja",
+                      "Mantenimiento"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "En uso",
+          "category": "Equipo de Red",
+          "purchase_cost": 0,
+          "residual_value": 0,
+          "useful_life_months": 60,
+          "monthly_depreciation": 0,
+          "accumulated_depreciation": 0,
+          "book_value": 0
+    },
+  },
+  {
+    key: 'fiscal_years',
+    label: 'Ejercicios Contables',
+    group: 'Finanzas',
+    icon: 'CalendarRange',
+    description: 'Periodos de cierre contable con ingresos, egresos, utilidad y estado del ejercicio.',
+    codePrefix: 'EJE',
+    search: ["code","name","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "name",
+                "label": "Ejercicio",
+                "type": "text"
+          },
+          {
+                "name": "period_start",
+                "label": "Inicio",
+                "type": "date"
+          },
+          {
+                "name": "period_end",
+                "label": "Fin",
+                "type": "date"
+          },
+          {
+                "name": "total_income",
+                "label": "Ingresos",
+                "type": "money"
+          },
+          {
+                "name": "total_expenses",
+                "label": "Egresos",
+                "type": "money"
+          },
+          {
+                "name": "profit",
+                "label": "Utilidad",
+                "type": "money"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "name",
+                "label": "Nombre del ejercicio",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "period_start",
+                "label": "Inicio del periodo",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "period_end",
+                "label": "Fin del periodo",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "total_income",
+                "label": "Total ingresos",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "total_expenses",
+                "label": "Total egresos",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "profit",
+                "label": "Utilidad / Pérdida",
+                "type": "money",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Abierto",
+                      "Cerrado"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Abierto",
+          "total_income": 0,
+          "total_expenses": 0,
+          "profit": 0
+    },
+  },
+  {
+    key: 'traffic_history',
+    label: 'Historial de Tráfico',
+    group: 'Clientes',
+    icon: 'Activity',
+    description: 'Consumo histórico por cliente/sesión: descarga, subida, duración y pico de tráfico.',
+    codePrefix: 'TRA',
+    search: ["code","customer_name","period","status"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text"
+          },
+          {
+                "name": "period",
+                "label": "Periodo",
+                "type": "text"
+          },
+          {
+                "name": "download_mb",
+                "label": "Descarga",
+                "type": "number"
+          },
+          {
+                "name": "upload_mb",
+                "label": "Subida",
+                "type": "number"
+          },
+          {
+                "name": "peak_mbps",
+                "label": "Pico Mbps",
+                "type": "number"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "text"
+          }
+    ],
+    fields: [
+          {
+                "name": "customer_name",
+                "label": "Cliente",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "period",
+                "label": "Periodo (YYYY-MM / sesión)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "ip_address",
+                "label": "IP",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "download_mb",
+                "label": "Descarga (MB)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "upload_mb",
+                "label": "Subida (MB)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "peak_mbps",
+                "label": "Pico (Mbps)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "session_minutes",
+                "label": "Duración (min)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "recorded_at",
+                "label": "Fecha de registro",
+                "type": "date",
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Normal",
+                      "Fuga / Leak",
+                      "Excedido",
+                      "Sin datos"
+                ],
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Normal",
+          "download_mb": 0,
+          "upload_mb": 0,
+          "peak_mbps": 0,
+          "session_minutes": 0,
+          "recorded_at": "2026-10-25"
+    },
+  },
+  {
+    key: 'subdomains',
+    integration: 'pending',
+    label: 'Subdominios / DNS',
+    group: 'Sistema',
+    icon: 'Globe',
+    description: 'Subdominios del ISP (portal, cliente, hotspot, panel) con su destino y certificado SSL.',
+    codePrefix: 'DNS',
+    search: ["code","subdomain","purpose","target"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "subdomain",
+                "label": "Subdominio",
+                "type": "mono"
+          },
+          {
+                "name": "purpose",
+                "label": "Propósito",
+                "type": "badge"
+          },
+          {
+                "name": "target",
+                "label": "Destino",
+                "type": "mono"
+          },
+          {
+                "name": "ssl",
+                "label": "SSL",
+                "type": "badge"
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "badge"
+          }
+    ],
+    fields: [
+          {
+                "name": "subdomain",
+                "label": "Subdominio",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "purpose",
+                "label": "Propósito",
+                "type": "select",
+                "options": [
+                      "Portal del cliente",
+                      "HotSpot",
+                      "Panel admin",
+                      "API",
+                      "Web",
+                      "Correo"
+                ],
+                "required": false
+          },
+          {
+                "name": "target",
+                "label": "Destino (IP / CNAME)",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "record_type",
+                "label": "Tipo de registro",
+                "type": "select",
+                "options": [
+                      "A",
+                      "CNAME",
+                      "AAAA",
+                      "TXT"
+                ],
+                "required": false
+          },
+          {
+                "name": "ssl",
+                "label": "Certificado SSL",
+                "type": "select",
+                "options": [
+                      "Emitido",
+                      "Pendiente",
+                      "No aplica"
+                ],
+                "required": false
+          },
+          {
+                "name": "status",
+                "label": "Estado",
+                "type": "select",
+                "options": [
+                      "Verificado",
+                      "Pendiente",
+                      "Error"
+                ],
+                "required": false
+          },
+          {
+                "name": "notes",
+                "label": "Observaciones",
+                "type": "textarea",
+                "required": false
+          }
+    ],
+    defaults: {
+          "status": "Pendiente",
+          "purpose": "Portal del cliente",
+          "record_type": "CNAME",
+          "ssl": "Pendiente"
+    },
+  },
+  {
+    key: 'template_tags',
+    integration: 'pending',
+    label: 'Tags de Plantillas',
+    group: 'Ajustes',
+    icon: 'Hash',
+    description: 'Variables disponibles para el Editor de Plantillas (facturas, avisos, SMS, WhatsApp y contratos).',
+    codePrefix: 'TAG',
+    search: ["code","tag","description","scope"],
+    columns: [
+          {
+                "name": "code",
+                "label": "Código",
+                "type": "mono"
+          },
+          {
+                "name": "tag",
+                "label": "Tag",
+                "type": "mono"
+          },
+          {
+                "name": "description",
+                "label": "Descripción",
+                "type": "text"
+          },
+          {
+                "name": "scope",
+                "label": "Ámbito",
+                "type": "text"
+          },
+          {
+                "name": "example",
+                "label": "Ejemplo",
+                "type": "text"
+          }
+    ],
+    fields: [
+          {
+                "name": "tag",
+                "label": "Tag / Variable",
+                "type": "text",
+                "required": true
+          },
+          {
+                "name": "description",
+                "label": "Descripción",
+                "type": "text",
+                "required": false
+          },
+          {
+                "name": "scope",
+                "label": "Ámbito",
+                "type": "select",
+                "options": [
+                      "Cliente",
+                      "Factura",
+                      "Pago",
+                      "Empresa",
+                      "Ticket",
+                      "Ficha HotSpot",
+                      "Contrato",
+                      "Fecha"
+                ],
+                "required": false
+          },
+          {
+                "name": "example",
+                "label": "Ejemplo de valor",
+                "type": "text",
+                "required": false
+          }
+    ],
+    defaults: {
+          "scope": "Cliente"
+    },
+  },
+  {
+    key: 'simplequeue_sync',
+    integration: 'real',
+    label: 'Sync Simple Queues',
+    group: 'Sistema',
+    icon: 'RefreshCw',
+    description: 'Sincroniza Simple Queues desde routers MikroTik a la base de datos local.',
+    codePrefix: 'SQS',
+    search: ["code","name","router","status"],
+    columns: [
+      {
+        "name": "code",
+        "label": "Código",
+        "type": "mono"
+      },
+      {
+        "name": "router_name",
+        "label": "Router",
+        "type": "text"
+      },
+      {
+        "name": "synced_count",
+        "label": "Colas sincronizadas",
+        "type": "number"
+      },
+      {
+        "name": "status",
+        "label": "Estado",
+        "type": "badge"
+      }
+    ],
+    fields: [
+      {
+        "name": "router_id",
+        "label": "Router MikroTik",
+        "type": "select",
+        "required": true,
+        "source": "routers",
+        "sourceValue": "id",
+        "sourceLabel": "name"
+      }
+    ],
+    defaults: {}
+  },
+  {
+    key: 'pcq_sync',
+    integration: 'real',
+    label: 'Sync PCQ',
+    group: 'Sistema',
+    icon: 'RefreshCw',
+    description: 'Sincroniza perfiles PCQ y Address Lists desde routers MikroTik.',
+    codePrefix: 'PCS',
+    search: ["code","name","router","status"],
+    columns: [
+      {
+        "name": "code",
+        "label": "Código",
+        "type": "mono"
+      },
+      {
+        "name": "router_name",
+        "label": "Router",
+        "type": "text"
+      },
+      {
+        "name": "synced_count",
+        "label": "Perfiles sincronizados",
+        "type": "number"
+      },
+      {
+        "name": "status",
+        "label": "Estado",
+        "type": "badge"
+      }
+    ],
+    fields: [
+      {
+        "name": "router_id",
+        "label": "Router MikroTik",
+        "type": "select",
+        "required": true,
+        "source": "routers",
+        "sourceValue": "id",
+        "sourceLabel": "name"
+      }
+    ],
+    defaults: {}
+  },
+  {
+    key: 'freeradius_sync',
+    integration: 'real',
+    label: 'Sync FreeRADIUS',
+    group: 'Sistema',
+    icon: 'RefreshCw',
+    description: 'Sincroniza sesiones activas y estadísticas desde FreeRADIUS.',
+    codePrefix: 'FRS',
+    search: ["code","name","router","status"],
+    columns: [
+      {
+        "name": "code",
+        "label": "Código",
+        "type": "mono"
+      },
+      {
+        "name": "status",
+        "label": "Estado",
+        "type": "badge"
+      }
+    ],
+    fields: [],
+    defaults: {}
+  },
+  {
+    key: 'olt_onu_sync',
+    integration: 'real',
+    label: 'Sync ONUs OLT',
+    group: 'Sistema',
+    icon: 'RefreshCw',
+    description: 'Sincroniza ONUs desde SmartOLT a la base de datos local.',
+    codePrefix: 'OUS',
+    search: ["code","name","olt","status"],
+    columns: [
+      {
+        "name": "code",
+        "label": "Código",
+        "type": "mono"
+      },
+      {
+        "name": "olt_name",
+        "label": "OLT",
+        "type": "text"
+      },
+      {
+        "name": "synced_count",
+        "label": "ONUs sincronizadas",
+        "type": "number"
+      },
+      {
+        "name": "status",
+        "label": "Estado",
+        "type": "badge"
+      }
+    ],
+    fields: [
+      {
+        "name": "olt_id",
+        "label": "OLT",
+        "type": "select",
+        "required": true,
+        "source": "olts",
+        "sourceValue": "id",
+        "sourceLabel": "name"
+      }
+    ],
+    defaults: {}
+  }
+]
+
+export const MODULE_MAP: Record<string, ModuleDef> = Object.fromEntries(
+  MODULE_REGISTRY.map(m => [m.key, m])
+);
+export function statusTone(value: unknown): string {
+  const v = String(value ?? '').toLowerCase();
+  if (['activo', 'activa', 'online', 'pagada', 'validado', 'aprobado', 'enviado', 'cerrado', 'resuelto', 'firmado', 'disponible', 'conectado', 'cobrada'].includes(v)) return 'ok';
+  if (['pendiente', 'moroso', 'warning', 'mantenimiento', 'en proceso', 'nuevo'].includes(v)) return 'warn';
+  if (['suspendido', 'vencida', 'offline', 'rechazado', 'cancelada', 'inactivo', 'no cobrada'].includes(v)) return 'bad';
+  return 'muted';
+}
+export function nextId(prefix: string, existing: Array<{ code?: string }>): string {
+  const max = existing.reduce((acc, r) => {
+    if (!r.code) return acc;
+    const match = r.code.match(new RegExp('^' + prefix + '(\\d+)$'));
+    if (match) return Math.max(acc, parseInt(match[1], 10));
+    return acc;
+  }, 0);
+  return prefix + String(max + 1).padStart(4, '0');
+}
+export function buildCode(prefix: string, n: number): string {
+  return prefix + String(n).padStart(4, '0');
+}

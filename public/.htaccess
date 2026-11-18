@@ -1,0 +1,21 @@
+# ============================================================================
+#  NetCore ISP — Front controller
+# ============================================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Sirve archivos y carpetas reales (assets, install.php, index.php).
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # El resto va a index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Sube el límite si tu hosting lo permite (opcional).
+<IfModule mod_php.c>
+    php_value upload_max_filesize 16M
+    php_value post_max_size 16M
+</IfModule>
+
+Options -Indexes

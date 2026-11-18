@@ -1,0 +1,70 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+/**
+ * NetCore ISP — CLI de tareas programadas (equivalente a `php artisan`).
+ *
+ * Ejecuta el MISMO motor real que cron.php (App\Core\Cron) contra la base de
+ * datos MySQL configurada en config/config.php.
+ *
+ * Uso:
+ *   php artisan invoices:generate
+ *   php artisan invoices:check-overdue
+ *   php artisan customers:suspend
+ *   php artisan mikrotik:sync
+ *   php artisan olt:sync
+ */
+
+require __DIR__ . '/app/Support/bootstrap.php';
+
+use App\Core\Config;
+use App\Core\Cron;
+use App\Core\Database;
+use App\Core\Modules;
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("Este script solo puede ejecutarse por línea de comandos.\n");
+}
+
+$commands = [
+    'invoices:generate'      => 'Genera facturación mensual para clientes activos/morosos.',
+    'invoices:check-overdue' => 'Marca como Vencidas las facturas con fecha de vencimiento pasada.',
+    'customers:suspend'      => 'Suspende morosos (BD) y aplica el corte PPPoE real en RouterOS.',
+    'mikrotik:sync'          => 'Lee por API RouterOS las sesiones PPPoE activas de cada router.',
+    'olt:sync'               => 'Consulta OLTs por SNMP/Telnet (pendiente de integración).',
+    'simplequeue:sync'       => 'Sincroniza Simple Queues desde routers MikroTik.',
+    'pcq:sync'               => 'Sincroniza perfiles PCQ desde routers MikroTik.',
+    'freeradius:sync'        => 'Sincroniza sesiones activas desde FreeRADIUS.',
+    'olt:onu:sync'           => 'Sincroniza ONUs desde SmartOLT.',
+];
+
+$command = $argv[1] ?? 'help';
+
+if ($command === 'help' || $command === 'list' || !isset($commands[$command])) {
+    echo 'NetCore ISP CLI (PHP ' . PHP_VERSION . ")\n";
+    echo "Uso: php artisan <comando>\n\nComandos disponibles:\n";
+    foreach ($commands as $cmd => $desc) {
+        printf("  %-26s %s\n", $cmd, $desc);
+    }
+    exit($command === 'help' || $command === 'list' ? 0 : 1);
+}
+
+if (!Config::isInstalled()) {
+    fwrite(STDERR, "La aplicación no está instalada (falta config/config.php).\n");
+    exit(1);
+}
+
+apply_app_config();
+
+try {
+    $modules = new Modules(Database::getConnection(), 1);
+    $summary = Cron::run($command, $modules);
+    $modules->appendAudit('CRON_EXEC', 'System/CLI', $command, $summary);
+    echo '[' . date('Y-m-d H:i:s') . "] php artisan {$command} -> {$summary}\n";
+    exit(0);
+} catch (Throwable $e) {
+    fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR {$command}: " . $e->getMessage() . "\n");
+    exit(1);
+}

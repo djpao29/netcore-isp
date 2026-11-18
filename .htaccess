@@ -1,0 +1,18 @@
+# ============================================================================
+#  NetCore ISP — Enrutamiento raíz hacia /public
+#  Permite instalar el proyecto en la raíz del hosting (XAMPP htdocs o cPanel)
+#  sin exponer app/, config/ ni database/.
+# ============================================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Las peticiones que ya apuntan a /public no se reescriben (evita bucles).
+    RewriteRule ^public/ - [L]
+
+    # Todo lo demás se sirve desde el front controller de /public.
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Si el hosting no permite mod_rewrite, lo ideal es apuntar el dominio
+# directamente a la carpeta /public (ver INSTALL.md).
+Options -Indexes

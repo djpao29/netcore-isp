@@ -1,0 +1,66 @@
+{
+  "device": "HIOSO HA7004S",
+  "type": "EPON OLT",
+  "vendor": "HIOSO",
+  "model": "HA7004S",
+  "ports": 4,
+  "max_onus": 256,
+  "snmp_versions": ["v2c", "v3"],
+  "default_snmp_port": 161,
+  "default_telnet_port": 23,
+  "oids": {
+    "system": {
+      "sysDescr": "1.3.6.1.2.1.1.1.0",
+      "sysName": "1.3.6.1.2.1.1.5.0",
+      "sysUpTime": "1.3.6.1.2.1.1.3.0",
+      "sysContact": "1.3.6.1.2.1.1.4.0",
+      "sysLocation": "1.3.6.1.2.1.1.6.0"
+    },
+    "interfaces": {
+      "ifNumber": "1.3.6.1.2.1.2.1.0",
+      "ifTable": "1.3.6.1.2.1.2.2.1",
+      "ifDescr": "1.3.6.1.2.1.2.2.1.2",
+      "ifType": "1.3.6.1.2.1.2.2.1.3",
+      "ifOperStatus": "1.3.6.1.2.1.2.2.1.8",
+      "ifInOctets": "1.3.6.1.2.1.2.2.1.10",
+      "ifOutOctets": "1.3.6.1.2.1.2.2.1.16"
+    },
+    "pon": {
+      "ponPortTable": "TODO: HIOSO enterprise OID for PON port table (e.g. 1.3.6.1.4.1.xxxx.1)",
+      "ponPortStatus": "TODO: PON port operational status",
+      "ponPortRxPower": "TODO: PON port RX optical power (dBm)",
+      "ponPortTxPower": "TODO: PON port TX optical power (dBm)",
+      "ponPortOnuCount": "TODO: number of ONUs on PON port"
+    },
+    "onu": {
+      "onuTable": "TODO: HIOSO enterprise OID for ONU table",
+      "onuSerial": "TODO: ONU serial number",
+      "onuMac": "TODO: ONU MAC address",
+      "onuStatus": "TODO: ONU status (online/offline/los)",
+      "onuRxPower": "TODO: ONU RX optical power (dBm)",
+      "onuTxPower": "TODO: ONU TX optical power (dBm)",
+      "onuDistance": "TODO: ONU distance (meters)",
+      "onuUptime": "TODO: ONU uptime",
+      "onuLastDownTime": "TODO: ONU last down time"
+    },
+    "alarms": {
+      "alarmTable": "TODO: HIOSO enterprise OID for alarm table",
+      "alarmSeverity": "TODO: alarm severity (critical/major/minor/warning)",
+      "alarmType": "TODO: alarm type code",
+      "alarmDesc": "TODO: alarm description",
+      "alarmTime": "TODO: alarm timestamp"
+    },
+    "traps": {
+      "coldStart": "1.3.6.1.6.3.1.1.5.1",
+      "warmStart": "1.3.6.1.6.3.1.1.5.2",
+      "linkDown": "1.3.6.1.6.3.1.1.5.3",
+      "linkUp": "1.3.6.1.6.3.1.1.5.4",
+      "authenticationFailure": "1.3.6.1.6.3.1.1.5.5",
+      "onuLos": "TODO: HIOSO ONU LOS trap OID",
+      "onuOffline": "TODO: HIOSO ONU offline trap OID",
+      "ponPortDown": "TODO: HIOSO PON port down trap OID",
+      "powerAlarm": "TODO: HIOSO power alarm trap OID"
+    }
+  },
+  "notes": "OIDs marcados con TODO deben completarse con el archivo MIB del HA7004S. Los OIDs estándar (IF-MIB, SNMPv2-MIB) funcionan en la mayoría de OLTs. Los OIDs enterprise (1.3.6.1.4.1.x) son específicos del fabricante y requieren el MIB."
+}
