@@ -21,7 +21,8 @@ import { FreeRadiusProvider } from './src/drivers/FreeRadiusDriver';
 export function routerCreds(router: any): RouterCreds {
   const port = Number(router.api_port) || 8728;
   const tls = port === 8729 || router.use_tls === true || router.use_tls === 'Sí' || router.use_tls === 'Si';
-  return {
+
+  const creds: RouterCreds = {
     host: String(router.ip_address || '').trim(),
     port,
     user: String(router.username || 'admin').trim(),
@@ -29,6 +30,13 @@ export function routerCreds(router: any): RouterCreds {
     tls,
     timeoutMs: 8000,
   };
+
+  // Agregar configuración WireGuard si está presente
+  if (router.wireguard_config) {
+    creds.wireguard = router.wireguard_config;
+  }
+
+  return creds;
 }
 
 type Db = Record<string, any>;
@@ -66,6 +74,15 @@ function coerceValue(field: FieldDef, raw: any) {
   }
   if (field.type === 'checkbox') {
     return raw === true || raw === 'true' || raw === 'Sí' || raw === 'si' || raw === 1;
+  }
+  if (field.type === 'json') {
+    if (raw === null || raw === undefined || raw === '') return undefined;
+    if (typeof raw === 'object') return raw;
+    try {
+      return JSON.parse(String(raw));
+    } catch {
+      return undefined;
+    }
   }
   if (raw === null || raw === undefined) return '';
   return String(raw);

@@ -7,7 +7,7 @@
 export interface FieldDef {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'money' | 'percent' | 'select' | 'date' | 'time' | 'datetime' | 'password' | 'email' | 'tel' | 'checkbox';
+  type: 'text' | 'textarea' | 'number' | 'money' | 'percent' | 'select' | 'date' | 'time' | 'datetime' | 'password' | 'email' | 'tel' | 'checkbox' | 'json';
   required?: boolean;
   options?: string[];
   source?: string;
@@ -17,6 +17,7 @@ export interface FieldDef {
   companions?: Array<{ field: string; sourceField: string }>;
   hidden?: boolean;
   placeholder?: string;
+  description?: string;
 }
 
 export type FieldType = FieldDef['type'];
@@ -5414,6 +5415,13 @@ export const MODULE_REGISTRY: ModuleDef[] = [
                 "label": "Observaciones",
                 "type": "textarea",
                 "required": false
+          },
+          {
+            "name": "wireguard_config",
+            "label": "Configuración WireGuard",
+            "type": "json",
+            "description": "Configuración completa del túnel WireGuard (generada con generateWireGuardSetup). Incluye: config, routerTunnelIP, interfaceName, preferSystemWG",
+            "required": false
           }
     ],
     defaults: {
@@ -7210,14 +7218,14 @@ export function statusTone(value: unknown): string {
   if (['suspendido', 'vencida', 'offline', 'rechazado', 'cancelada', 'inactivo', 'no cobrada'].includes(v)) return 'bad';
   return 'muted';
 }
-export function nextId(prefix: string, existing: Array<{ code?: string }>): string {
+export function nextId(prefix: string, existing: Array<{ code?: string }>): number {
   const max = existing.reduce((acc, r) => {
     if (!r.code) return acc;
     const match = r.code.match(new RegExp('^' + prefix + '(\\d+)$'));
     if (match) return Math.max(acc, parseInt(match[1], 10));
     return acc;
   }, 0);
-  return prefix + String(max + 1).padStart(4, '0');
+  return max + 1;
 }
 export function buildCode(prefix: string, n: number): string {
   return prefix + String(n).padStart(4, '0');

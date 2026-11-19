@@ -7,10 +7,13 @@
 //
 //  No es simulado: abre un socket TCP/TLS real contra el equipo. Si el equipo
 //  no es alcanzable o las credenciales son incorrectas, devuelve el error real.
+//  SOPORTE WireGuard: túnel cifrado para routers detrás de NAT/CGNAT,
+//  exponiendo SOLO puerto UDP 51820 a Internet (nunca 8728/8729).
 // ============================================================================
 import net from 'net';
 import tls from 'tls';
 import crypto from 'crypto';
+import { WireGuardMikrotikClient, WireGuardConfig, generateWireGuardKeys } from './wireguard.js';
 
 export interface RouterCreds {
   host: string;
@@ -19,6 +22,21 @@ export interface RouterCreds {
   password: string;
   tls?: boolean;
   timeoutMs?: number;
+
+  // --- WireGuard (opcional) ---
+  // Si se proporciona, el cliente PRIMERO establece túnel WireGuard
+  // y luego habla API por el túnel (routerTunnelIP).
+  // NUNCA expone 8728/8729 a Internet.
+  wireguard?: {
+    /** Configuración completa del túnel (generada con generateWireGuardSetup) */
+    config: WireGuardConfig;
+    /** IP del router DENTRO del túnel (ej: "10.8.0.1") */
+    routerTunnelIP: string;
+    /** Nombre de interfaz local (default: "wg-mikrotik") */
+    interfaceName?: string;
+    /** Forzar wireguard-tools del sistema (default: true) */
+    preferSystemWG?: boolean;
+  };
 }
 
 type Sentence = string[];
@@ -104,6 +122,28 @@ export class MikrotikClient {
     await client.open();
     await client.login();
     return client;
+  }
+
+  /**
+   * Conecta a través de túnel WireGuard.
+   * El túnel cifra todo el tráfico; el router NO expone 8728/8729 a Internet.
+   * Solo puerto UDP 51820 (WireGuard) está abierto en el router.
+   */
+  static async connectWithWireGuard(creds: RouterCreds): Promise<WireGuardMikrotikClient> {
+    if (!creds.wireguard) {
+      throw new Error('Configuración WireGuard requerida en creds.wireguard');
+    }
+
+    const { config, routerTunnelIP, interfaceName, preferSystemWG } = creds.wireguard;
+
+    const wgClient = new WireGuardMikrotikClient(creds, config, {
+      interfaceName,
+      preferSystemWG,
+      routerTunnelIP,
+    });
+
+    await wgClient.connect();
+    return wgClient;
   }
 
   private open(): Promise<void> {
@@ -367,7 +407,17 @@ export async function runRouterTool(
   routerName: string
 ): Promise<RouterToolResult> {
   const { words, note } = buildCommand(tool, routerName);
-  const client = await MikrotikClient.connect(creds);
+
+  // Usar WireGuard si está configurado
+  const useWireGuard = !!creds.wireguard;
+  let client: MikrotikClient | WireGuardMikrotikClient;
+
+  if (useWireGuard) {
+    client = await MikrotikClient.connectWithWireGuard(creds);
+  } else {
+    client = await MikrotikClient.connect(creds);
+  }
+
   try {
     const res = await client.talk(words);
     if (res.trapped) {
@@ -382,7 +432,7 @@ export async function runRouterTool(
       text: `${note ? `# ${note}\n` : ''}$ ${words.join(' ')}\n\n${body}`,
     };
   } finally {
-    client.close();
+    await client.close();
   }
 }
 
@@ -399,12 +449,20 @@ export interface RouterTestResult {
 
 /** Prueba de conexión real: autentica y consulta identidad + recursos. */
 export async function testRouterConnection(creds: RouterCreds): Promise<RouterTestResult> {
-  let client: MikrotikClient;
+  const useWireGuard = !!creds.wireguard;
+  let client: MikrotikClient | WireGuardMikrotikClient;
+
   try {
-    client = await MikrotikClient.connect(creds);
+    if (useWireGuard) {
+      client = await MikrotikClient.connectWithWireGuard(creds);
+    } else {
+      client = await MikrotikClient.connect(creds);
+    }
   } catch (err: any) {
-    return { ok: false, message: `No se pudo conectar/autenticar en ${creds.host}: ${err?.message || err}` };
+    const via = useWireGuard ? 'WireGuard' : 'directo';
+    return { ok: false, message: `No se pudo conectar/autenticar en ${creds.host} (${via}): ${err?.message || err}` };
   }
+
   try {
     const identity = await client.talk(['/system/identity/print']);
     const resource = await client.talk(['/system/resource/print']);
@@ -413,6 +471,7 @@ export async function testRouterConnection(creds: RouterCreds): Promise<RouterTe
       const w = row.find((x) => x.startsWith(`=${key}=`));
       return w ? w.slice(key.length + 2) : undefined;
     };
+    const via = useWireGuard ? 'WireGuard' : 'directo';
     return {
       ok: true,
       identity: pick(identity.rows, 'name'),
@@ -421,12 +480,12 @@ export async function testRouterConnection(creds: RouterCreds): Promise<RouterTe
       board: pick(resource.rows, 'board-name'),
       cpu_load: pick(resource.rows, 'cpu-load'),
       free_memory: pick(resource.rows, 'free-memory'),
-      message: `Conexión correcta con ${creds.host}:${creds.port}.`,
+      message: `Conexión correcta con ${creds.host} (${via}).`,
     };
   } catch (err: any) {
     return { ok: false, message: `Conectado pero la consulta falló: ${err?.message || err}` };
   } finally {
-    client.close();
+    await client.close();
   }
 }
 
@@ -436,7 +495,19 @@ export async function setPppoeEnabled(
   username: string,
   enabled: boolean
 ): Promise<{ ok: boolean; message: string }> {
-  const client = await MikrotikClient.connect(creds);
+  const useWireGuard = !!creds.wireguard;
+  let client: MikrotikClient | WireGuardMikrotikClient;
+
+  try {
+    if (useWireGuard) {
+      client = await MikrotikClient.connectWithWireGuard(creds);
+    } else {
+      client = await MikrotikClient.connect(creds);
+    }
+  } catch (err: any) {
+    return { ok: false, message: `No se pudo conectar: ${err?.message || err}` };
+  }
+
   try {
     const found = await client.talk(['/ppp/secret/print', `?name=${username}`]);
     const idWord = (found.rows[0] || []).find((w) => w.startsWith('=.id='));
@@ -460,6 +531,6 @@ export async function setPppoeEnabled(
       message: `Secreto PPPoE "${username}" ${enabled ? 'habilitado' : 'deshabilitado'} en el router.`,
     };
   } finally {
-    client.close();
+    await client.close();
   }
 }
