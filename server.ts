@@ -698,43 +698,261 @@ async function startServer() {
     let summary = '';
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
+    const todayDay = now.getDate();
     const monthTag = now.toISOString().slice(0, 7);
 
+    // Helper: get zone for customer
+    const getCustomerZone = (customer: any) => {
+      if (!customer.zone_id) return null;
+      return db.zones?.find((z: any) => String(z.id) === String(customer.zone_id)) || null;
+    };
+
+    // Helper: get day of month for a date string
+    const getDayOfMonth = (dateStr: string) => {
+      if (!dateStr) return null;
+      return new Date(dateStr).getDate();
+    };
+
     switch (command) {
-      case 'invoices:generate': {
-        const evaluados = db.customers.filter((c: any) => c.status === 'Activo' || c.status === 'Moroso');
-        let creadas = 0;
-        evaluados.forEach((c: any) => {
-          const yaExiste = db.invoices.some(
-            (i: any) => i.customer_id === c.id && String(i.issue_date || '').slice(0, 7) === monthTag
-          );
-          if (yaExiste) return;
-          const plan = db.plans.find((p: any) => p.id === c.plan_id);
-          const total = plan ? Number(plan.price_monthly) || 0 : 0;
-          const nextId = (db.invoices.reduce((m: number, i: any) => Math.max(m, Number(i.id) || 0), 0) || 0) + 1;
-          const dueDay = Number(db.isps.find((s: any) => s.id === (c.isp_id || 1))?.cut_day) || 5;
-          const due = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().slice(0, 10);
-          db.invoices.unshift({
-            id: nextId,
-            isp_id: c.isp_id || 1,
-            invoice_number: `FAC-${now.getFullYear()}-${String(1000 + nextId).slice(-4)}`,
-            customer_id: c.id,
-            customer_name: `${c.first_name} ${c.last_name}`.trim(),
-            plan_name: plan ? plan.name : 'Sin plan asignado',
-            issue_date: today,
-            due_date: due,
-            subtotal: total,
-            discount: 0,
-            tax_amount: 0,
-            total,
-            status: 'Pendiente',
-            method: '—',
-          });
-          creadas++;
-        });
-        summary = `Facturas generadas: ${creadas}. Clientes activos/morosos evaluados: ${evaluados.length}.`;
+      // ============================================================
+      // PROCESAMIENTO DIARIO POR ZONAS (comando principal)
+      // ============================================================
+      case 'zones:process-daily': {
+        const zones = (db.zones || []).filter((z: any) => z.status === 'Activo');
+        let totalInvoices = 0, totalReminders = 0, totalCuts = 0, totalSuspends = 0;
+        const results: string[] = [];
+
+        for (const zone of zones) {
+          const paymentDay = zone.payment_day || 1;
+          const invoiceAdvance = zone.invoice_advance_days || 2;
+          const reminderDay = zone.reminder_day || 15;
+          const graceDays = zone.grace_days || 5;
+          const cutDay = zone.cut_day || 20;
+          const suspendAfter = zone.suspend_after_days || 5;
+
+          const customersInZone = db.customers.filter((c: any) => String(c.zone_id) === String(zone.id) && (c.status === 'Activo' || c.status === 'Moroso'));
+          let zoneInvoices = 0, zoneReminders = 0, zoneCuts = 0, zoneSuspends = 0;
+
+          for (const customer of customersInZone) {
+            // 1. GENERAR FACTURA (paymentDay - invoiceAdvanceDays)
+            const invoiceGenDay = paymentDay - (invoiceAdvance || 2);
+            if (todayDay === invoiceGenDay) {
+              const yaExiste = db.invoices.some(
+                (i: any) => i.customer_id === customer.id && String(i.issue_date || '').slice(0, 7) === monthTag
+              );
+              if (!yaExiste) {
+                const plan = db.plans.find((p: any) => p.id === customer.plan_id);
+                const total = plan ? Number(plan.price_monthly) || 0 : 0;
+                const nextId = (db.invoices.reduce((m: number, i: any) => Math.max(m, Number(i.id) || 0), 0) || 0) + 1;
+                const due = new Date(now.getFullYear(), now.getMonth(), cutDay).toISOString().slice(0, 10);
+                db.invoices.unshift({
+                  id: nextId,
+                  isp_id: customer.isp_id || 1,
+                  invoice_number: `FAC-${now.getFullYear()}-${String(1000 + nextId).slice(-4)}`,
+                  customer_id: customer.id,
+                  customer_name: `${customer.first_name} ${customer.last_name}`.trim(),
+                  plan_name: plan ? plan.name : 'Sin plan',
+                  issue_date: today,
+                  due_date: due,
+                  subtotal: total,
+                  discount: 0,
+                  tax_amount: 0,
+                  total,
+                  status: 'Pendiente',
+                  method: '—',
+                });
+                zoneInvoices++;
+                totalInvoices++;
+              }
+            }
+
+            // 2. ENVIAR RECORDATORIO (reminderDay)
+            if (todayDay === reminderDay) {
+              zoneReminders++;
+              totalReminders++;
+              // Aquí iría envío WhatsApp/Email - por ahora solo log
+              appendAudit(db, 1, 'CRON_ZONE', 'REMINDER_SENT', 'Zone', zone.name, `Recordatorio enviado a cliente ${customer.code} en zona ${zone.name}`);
+            }
+
+            // 3. APLICAR CORTE (cutDay + graceDays)
+            const cutEffectiveDay = cutDay + (graceDays || 5);
+            if (todayDay === cutEffectiveDay) {
+              const tieneVencida = db.invoices.some((i: any) => i.customer_id === customer.id && i.status === 'Vencida');
+              const tienePromesa = db.payment_promises.some((p: any) => p.customer_id === customer.id && p.status === 'Pendiente');
+              if (tieneVencida && !tienePromesa && customer.status !== 'Suspendido') {
+                customer.status = 'Moroso'; // Estado antes de suspensión
+                zoneCuts++;
+                totalCuts++;
+                appendAudit(db, 1, 'CRON_ZONE', 'CUT_APPLIED', 'Zone', zone.name, `Corte aplicado a cliente ${customer.code} en zona ${zone.name}`);
+              }
+            }
+
+            // 4. SUSPENDER (cutDay + graceDays + suspendAfterDays)
+            const suspendDay = cutDay + (graceDays || 5) + (suspendAfter || 5);
+            if (todayDay === suspendDay) {
+              const tieneVencida = db.invoices.some((i: any) => i.customer_id === customer.id && i.status === 'Vencida');
+              const tienePromesa = db.payment_promises.some((p: any) => p.customer_id === customer.id && p.status === 'Pendiente');
+              if (tieneVencida && !tienePromesa && customer.status !== 'Suspendido') {
+                customer.status = 'Suspendido';
+                customer.current_rx_mbps = 0;
+                customer.current_tx_mbps = 0;
+                const cpe = db.network_inventory.find((d: any) => d.customer_id === customer.id);
+                if (cpe) cpe.status = 'offline';
+                zoneSuspends++;
+                totalSuspends++;
+                // Corte REAL en RouterOS
+                const router = (db.routers || []).find((r: any) => String(r.id) === String(customer.router_id)) || (db.routers || [])[0];
+                if (router && router.ip_address && customer.pppoe_user) {
+                  try {
+                    await setPppoeEnabled(routerCreds(router), String(customer.pppoe_user), false);
+                  } catch (err: any) {
+                    appendAudit(db, 1, 'CRON_ZONE', 'SUSPEND_FAILED', 'Zone', zone.name, `Error suspendiendo ${customer.pppoe_user}: ${err?.message}`);
+                  }
+                }
+                appendAudit(db, 1, 'CRON_ZONE', 'SUSPENDED', 'Zone', zone.name, `Suspendido cliente ${customer.code} en zona ${zone.name}`);
+              }
+            }
+          }
+
+          if (zoneInvoices || zoneReminders || zoneCuts || zoneSuspends) {
+            results.push(`${zone.name}: Facturas=${zoneInvoices} Recordatorios=${zoneReminders} Cortes=${zoneCuts} Suspensiones=${zoneSuspends}`);
+          }
+        }
+
+        summary = `Procesamiento diario por zonas: Facturas=${totalInvoices} Recordatorios=${totalReminders} Cortes=${totalCuts} Suspensiones=${totalSuspends}. Detalle: ${results.join(' | ')}`;
         break;
       }
+
+      // ============================================================
+      // COMANDOS ADICIONALES POR ZONAS
+      // ============================================================
+      case 'zones:generate-invoices': {
+        // Generar facturas para zonas donde hoy toca
+        const zones = (db.zones || []).filter((z: any) => z.status === 'Activo');
+        let count = 0;
+        for (const zone of zones) {
+          const paymentDay = zone.payment_day || 1;
+          const invoiceAdvance = zone.invoice_advance_days || 2;
+          const genDay = paymentDay - (invoiceAdvance || 2);
+          if (todayDay !== genDay) continue;
+
+          const customersInZone = db.customers.filter((c: any) => String(c.zone_id) === String(zone.id) && (c.status === 'Activo' || c.status === 'Moroso'));
+          for (const customer of customersInZone) {
+            const yaExiste = db.invoices.some((i: any) => i.customer_id === customer.id && String(i.issue_date || '').slice(0, 7) === monthTag);
+            if (yaExiste) continue;
+            const plan = db.plans.find((p: any) => p.id === customer.plan_id);
+            const invoiceTotal = plan ? Number(plan.price_monthly) || 0 : 0;
+            const nextId = (db.invoices.reduce((m: number, i: any) => Math.max(m, Number(i.id) || 0), 0) || 0) + 1;
+            const cutDay = zone.cut_day || 20;
+            const due = new Date(now.getFullYear(), now.getMonth(), cutDay).toISOString().slice(0, 10);
+            db.invoices.unshift({
+              id: nextId,
+              isp_id: customer.isp_id || 1,
+              invoice_number: `FAC-${now.getFullYear()}-${String(1000 + nextId).slice(-4)}`,
+              customer_id: customer.id,
+              customer_name: `${customer.first_name} ${customer.last_name}`.trim(),
+              plan_name: plan ? plan.name : 'Sin plan',
+              issue_date: today,
+              due_date: due,
+              subtotal: invoiceTotal,
+              discount: 0,
+              tax_amount: 0,
+              total: invoiceTotal,
+              status: 'Pendiente',
+              method: '—',
+            });
+            count++;
+          }
+        }
+        summary = `Facturas generadas por zona: ${count}`;
+        break;
+      }
+
+      case 'zones:send-reminders': {
+        // Enviar recordatorios para zonas donde hoy toca
+        const zones = (db.zones || []).filter((z: any) => z.status === 'Activo');
+        let total = 0;
+        for (const zone of zones) {
+          const reminderDay = zone.reminder_day || 15;
+          if (todayDay !== reminderDay) continue;
+
+          const customersInZone = db.customers.filter((c: any) => String(c.zone_id) === String(zone.id) && (c.status === 'Activo' || c.status === 'Moroso'));
+          for (const customer of customersInZone) {
+            const tienePendiente = db.invoices.some((i: any) => i.customer_id === customer.id && i.status === 'Pendiente');
+            if (tienePendiente) {
+              total++;
+              appendAudit(db, 1, 'CRON_ZONE', 'REMINDER_SENT', 'Zone', zone.name, `Recordatorio enviado a cliente ${customer.code} en zona ${zone.name}`);
+            }
+          }
+        }
+        summary = `Recordatorios enviados por zona: ${total}`;
+        break;
+      }
+
+      case 'zones:apply-cuts': {
+        // Aplicar cortes para zonas donde hoy toca
+        const zones = (db.zones || []).filter((z: any) => z.status === 'Activo');
+        let total = 0;
+        for (const zone of zones) {
+          const cutDay = zone.cut_day || 20;
+          const graceDays = zone.grace_days || 5;
+          const cutEffectiveDay = cutDay + (graceDays || 5);
+          if (todayDay !== cutEffectiveDay) continue;
+
+          const customersInZone = db.customers.filter((c: any) => String(c.zone_id) === String(zone.id) && (c.status === 'Activo' || c.status === 'Moroso'));
+          for (const customer of customersInZone) {
+            const tieneVencida = db.invoices.some((i: any) => i.customer_id === customer.id && i.status === 'Vencida');
+            const tienePromesa = db.payment_promises.some((p: any) => p.customer_id === customer.id && p.status === 'Pendiente');
+            if (tieneVencida && !tienePromesa && customer.status !== 'Suspendido') {
+              customer.status = 'Moroso';
+              total++;
+              appendAudit(db, 1, 'CRON_ZONE', 'CUT_APPLIED', 'Zone', zone.name, `Corte aplicado a cliente ${customer.code} en zona ${zone.name}`);
+            }
+          }
+        }
+        summary = `Cortes aplicados por zona: ${total}`;
+        break;
+      }
+
+      case 'zones:apply-suspends': {
+        // Suspender clientes para zonas donde hoy toca
+        const zones = (db.zones || []).filter((z: any) => z.status === 'Activo');
+        let total = 0;
+        for (const zone of zones) {
+          const cutDay = zone.cut_day || 20;
+          const graceDays = zone.grace_days || 5;
+          const suspendAfter = zone.suspend_after_days || 5;
+          const suspendDay = cutDay + (graceDays || 5) + (suspendAfter || 5);
+          if (todayDay !== suspendDay) continue;
+
+          const customersInZone = db.customers.filter((c: any) => String(c.zone_id) === String(zone.id) && (c.status === 'Activo' || c.status === 'Moroso'));
+          for (const customer of customersInZone) {
+            const tieneVencida = db.invoices.some((i: any) => i.customer_id === customer.id && i.status === 'Vencida');
+            const tienePromesa = db.payment_promises.some((p: any) => p.customer_id === customer.id && p.status === 'Pendiente');
+            if (tieneVencida && !tienePromesa && customer.status !== 'Suspendido') {
+              customer.status = 'Suspendido';
+              customer.current_rx_mbps = 0;
+              customer.current_tx_mbps = 0;
+              const cpe = db.network_inventory.find((d: any) => d.customer_id === customer.id);
+              if (cpe) cpe.status = 'offline';
+              total++;
+              // Corte REAL en RouterOS
+              const router = (db.routers || []).find((r: any) => String(r.id) === String(customer.router_id)) || (db.routers || [])[0];
+              if (router && router.ip_address && customer.pppoe_user) {
+                try {
+                  await setPppoeEnabled(routerCreds(router), String(customer.pppoe_user), false);
+                } catch (err: any) {
+                  appendAudit(db, 1, 'CRON_ZONE', 'SUSPEND_FAILED', 'Zone', zone.name, `Error suspendiendo ${customer.pppoe_user}: ${err?.message}`);
+                }
+              }
+              appendAudit(db, 1, 'CRON_ZONE', 'SUSPENDED', 'Zone', zone.name, `Suspendido cliente ${customer.code} en zona ${zone.name}`);
+            }
+          }
+        }
+        summary = `Suspensiones aplicadas por zona: ${total}`;
+        break;
+      }
+
       case 'hotspot:generate': {
         const db = loadDb();
         const { plan, quantity, prefix, price, pdv } = req.body || {};
@@ -1388,6 +1606,53 @@ function normalizeImportedRow(section: string, row: any): any {
   const PORT = 3000;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`NetCore ISP Full-Stack Server listening on http://0.0.0.0:${PORT}`);
+
+    // ============================================================
+    // SCHEDULER AUTOMÁTICO DIARIO PARA PROCESAMIENTO POR ZONAS
+    // Se ejecuta cada día a la 00:05 AM
+    // ============================================================
+    const runDailyZoneProcessing = async () => {
+      const now = new Date();
+      const nextRun = new Date(now);
+      nextRun.setHours(0, 5, 0, 0); // 00:05 AM
+      if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
+
+      const msUntilRun = nextRun.getTime() - now.getTime();
+
+      setTimeout(async () => {
+        console.log(`[CRON] Ejecutando procesamiento diario por zonas...`);
+        try {
+          const response = await fetch('http://localhost:3000/api/v1/cron/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'zones:process-daily' })
+          });
+          const result = await response.json();
+          console.log(`[CRON] ${result.summary || result.message}`);
+        } catch (err: any) {
+          console.error(`[CRON] Error:`, err.message);
+        }
+
+        // Programar siguiente ejecución (24 horas)
+        setInterval(async () => {
+          console.log(`[CRON] Ejecutando procesamiento diario por zonas...`);
+          try {
+            const response = await fetch('http://localhost:3000/api/v1/cron/run', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: 'zones:process-daily' })
+            });
+            const result = await response.json();
+            console.log(`[CRON] ${result.summary || result.message}`);
+          } catch (err: any) {
+            console.error(`[CRON] Error:`, err.message);
+          }
+        }, 24 * 60 * 60 * 1000);
+      }, msUntilRun);
+    };
+
+    // Iniciar scheduler
+    runDailyZoneProcessing();
   });
 }
 

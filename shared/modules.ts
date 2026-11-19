@@ -305,8 +305,32 @@ export const MODULE_REGISTRY: ModuleDef[] = [
                 "required": false
           },
           {
+                "name": "invoice_advance_days",
+                "label": "Días antes para generar factura",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "reminder_day",
+                "label": "Día de recordatorio (1-28)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "grace_days",
+                "label": "Días de gracia antes de corte",
+                "type": "number",
+                "required": false
+          },
+          {
                 "name": "cut_day",
                 "label": "Día de corte (1-28)",
+                "type": "number",
+                "required": false
+          },
+          {
+                "name": "suspend_after_days",
+                "label": "Días tras corte para suspender",
                 "type": "number",
                 "required": false
           },
@@ -342,7 +366,11 @@ export const MODULE_REGISTRY: ModuleDef[] = [
     defaults: {
           "status": "Activo",
           "payment_day": 1,
-          "cut_day": 5
+          "invoice_advance_days": 2,
+          "reminder_day": 15,
+          "grace_days": 5,
+          "cut_day": 20,
+          "suspend_after_days": 5
     },
   },
   {
